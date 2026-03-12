@@ -118,8 +118,15 @@ impl ColorSource for Color {
 
 impl ColorSource for &'_ str {
 	fn color(self) -> Color {
+		HashSource(self).color()
+	}
+}
+
+pub struct HashSource<T: Hash>(pub T);
+impl<T: Hash> ColorSource for HashSource<T> {
+	fn color(self) -> Color {
 		let mut hasher = DefaultHasher::new();
-		self.hash(&mut hasher);
+		self.0.hash(&mut hasher);
 		let hash = hasher.finish();
 
 		let rgb = RandomColor::new()

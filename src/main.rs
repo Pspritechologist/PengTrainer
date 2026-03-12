@@ -1,26 +1,20 @@
-use avian3d::{PhysicsPlugins, prelude::{AngularVelocity, Collider, LinearVelocity, PhysicsDebugPlugin, RigidBody}};
-use bevy::{camera_controller::free_camera::{FreeCamera, FreeCameraPlugin}, dev_tools::fps_overlay::FpsOverlayConfig, prelude::*};
+use avian3d::{PhysicsPlugins, prelude::{AngularVelocity, Collider, PhysicsDebugPlugin, RigidBody}};
+use bevy::{camera_controller::free_camera::{FreeCamera, FreeCameraPlugin}, prelude::*};
 use bevy_rts_camera::RtsCameraPlugin;
-use bevy_trenchbroom::{config::MapFileFormat, prelude::*};
-use bevy_trenchbroom_avian::AvianPhysicsBackend;
 use debug::PrototypeMaterial;
 
 mod debug;
+mod trenchbroom;
 mod rts;
 
 fn main() {
 	let mut app = App::new();
 
 	app.add_plugins((DefaultPlugins, PhysicsPlugins::default()))
-		.add_plugins((TrenchBroomPhysicsPlugin::new(AvianPhysicsBackend), TrenchBroomPlugins(TrenchBroomConfig::new("PengTrainerBevy")
-			.file_formats([MapFileFormat::Valve])
-			// .load_loose_texture_fn(load::default_load_loose_texture)
-			.default_solid_scene_hooks(|| SceneHooks::new().convex_collider()))))
+		.add_plugins(trenchbroom::Plugin)
 		.add_plugins((FreeCameraPlugin, RtsCameraPlugin))
 		.add_plugins(debug::PrototypeMaterialPlugin)
-		.add_systems(PostStartup, setup)
-		.add_systems(PostUpdate, Ball::handle_spawn)
-		.register_type::<Ball>();
+		.add_systems(PostStartup, setup);
 
 	if std::env::args_os().any(|a| a.eq_ignore_ascii_case("--phys-debug")) {
 		app.add_plugins(PhysicsDebugPlugin);
@@ -31,34 +25,6 @@ fn main() {
 	}
 
 	app.run();
-}
-
-#[point_class]
-#[derive(Default, Component)]
-/// A parkin ball
-struct Ball {
-	/// Nyooom.
-	velocity: Vec3,
-}
-
-impl Ball {
-	fn handle_spawn(
-		mut commands: Commands,
-		entities: Query<(Entity, &Ball, Option<&Transform>), Changed<Ball>>,
-		mut meshes: ResMut<Assets<Mesh>>,
-	) {
-		let mut mesh = None;
-
-		for (entity, ball, xform) in entities {
-			commands.entity(entity).insert((
-				LinearVelocity(ball.velocity),
-				RigidBody::Dynamic,
-				Collider::sphere(0.5),
-				Mesh3d(mesh.get_or_insert_with(|| meshes.add(Mesh::from(Sphere::new(0.5)))).clone()),
-				PrototypeMaterial::new(format!("{:?}", xform.map_or(Vec3::ZERO, |xform| xform.translation)).as_str()),
-			));
-		}
-	}
 }
 
 fn setup(
