@@ -12,30 +12,13 @@ pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
 	fn build(&self, app: &mut App) {
 		app.add_plugins((TrenchBroomPhysicsPlugin::new(AvianPhysicsBackend), TrenchBroomPlugins(TrenchBroomConfig::new("PengTrainerBevy")
-			.file_formats([MapFileFormat::Valve])
-			// .load_loose_texture_fn(load::default_load_loose_texture)
+			.file_formats([MapFileFormat::Quake2Valve])
+			.icon(Some(include_bytes!("../icon/32x.png").into()))
+			// .global_transform_application(value)
 			.default_solid_scene_hooks(|| SceneHooks::new().convex_collider()))))
 		.add_systems(PostUpdate, Ball::handle_spawn)
 		.register_type::<Ball>();
 	}
-}
-
-type LoadLooseTextureFn = dyn for<'a, 'b> Fn(TextureLoadView<'a, 'b>) -> BoxedFuture<'a, Handle<GenericMaterial>> + Send + Sync;
-
-pub fn default_load_loose_texture(f: Arc<LoadLooseTextureFn>) -> Arc<LoadLooseTextureFn> {
-	Arc::new(move |view| {
-		let f = f.clone();
-		Box::pin(async move {
-			if let Some(name) = view.name.strip_prefix("Proto_") {
-				let mat = PrototypeMaterialAsset::new(name, view.asset_server);
-				let handle = view.asset_server.add(mat);
-
-				return view.load_context.add_labeled_asset(format!("Material_{}", view.name), GenericMaterial::new(handle));
-			}
-
-			f(view).await
-		})
-	})
 }
 
 #[point_class]
