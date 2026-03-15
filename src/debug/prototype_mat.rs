@@ -82,7 +82,8 @@ impl Plugin for PrototypeMaterialPlugin {
 }
 
 /// Component which includes [`PrototypeMaterialAsset`] to [`Entity`] in the next [`PostUpdate`].
-#[derive(Component, Debug, Clone, Copy)]
+#[derive(Component, Reflect, Debug, Clone, Copy)]
+#[reflect(Component)]
 pub struct PrototypeMaterial {
 	color: Color,
 }
@@ -119,6 +120,28 @@ impl ColorSource for Color {
 impl ColorSource for &'_ str {
 	fn color(self) -> Color {
 		HashSource(self).color()
+	}
+}
+
+impl ColorSource for Vec3 {
+	fn color(self) -> Color {
+		let Vec3 { x, y, z } = self;
+
+		let [xt, yt, zt] = [
+			x.trunc(),
+			y.trunc(),
+			z.trunc(),
+		];
+
+		let [xf, yf, zf] = [
+			((x - xt) * 100.0) as i64,
+			((y - yt) * 100.0) as i64,
+			((z - zt) * 100.0) as i64,
+		];
+
+		let source = [(xt as i64, xf), (yt as i64, yf), (zt as i64, zf)];
+
+		HashSource(source).color()
 	}
 }
 

@@ -13,6 +13,8 @@ fn main() {
 	app.add_plugins((DefaultPlugins, PhysicsPlugins::default()))
 		.add_plugins(trenchbroom::Plugin)
 		.add_plugins((FreeCameraPlugin, RtsCameraPlugin))
+        // .add_plugins(bevy_inspector_egui::bevy_egui::EguiPlugin::default())
+        // .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
 		.add_plugins(debug::PrototypeMaterialPlugin)
 		.add_systems(PostStartup, setup);
 

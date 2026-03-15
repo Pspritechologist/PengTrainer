@@ -1,27 +1,64 @@
 use bevy::prelude::*;
-use bevy_trenchbroom::{config::MapFileFormat, prelude::*};
+use bevy_trenchbroom::{anyhow, class::{QuakeClassSpawnView, builtin::FuncGeneric}, config::MapFileFormat, prelude::*};
 use bevy_trenchbroom_avian::AvianPhysicsBackend;
 use avian3d::prelude::{Collider, LinearVelocity, RigidBody};
-
-use crate::debug::{PrototypeMaterialAsset, PrototypeMaterial};
-use bevy_trenchbroom::config::TextureLoadView;
-use bevy::tasks::BoxedFuture;
-use std::sync::Arc;
+use crate::debug::{self, ColorSource};
 
 pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
 	fn build(&self, app: &mut App) {
-		app.add_plugins((TrenchBroomPhysicsPlugin::new(AvianPhysicsBackend), TrenchBroomPlugins(TrenchBroomConfig::new("PengTrainerBevy")
-			.file_formats([MapFileFormat::Quake2Valve])
-			.icon(Some(include_bytes!("../icon/32x.png").into()))
-			// .global_transform_application(value)
-			.default_solid_scene_hooks(|| SceneHooks::new().convex_collider()))))
-		.add_systems(PostUpdate, Ball::handle_spawn)
-		.register_type::<Ball>();
+		app.add_plugins((
+			TrenchBroomPhysicsPlugin::new(AvianPhysicsBackend),
+			TrenchBroomPlugins(TrenchBroomConfig::new("PengTrainerBevy")
+				.file_formats([MapFileFormat::Quake2Valve])
+				.icon(Some(include_bytes!("../icon/32x.png").into()))
+				.global_transform_application(false)
+				.default_solid_scene_hooks(|| SceneHooks::new().convex_collider()))
+			))
+		.add_systems(PostUpdate, Ball::handle_spawn);
 	}
 }
 
-#[point_class]
+#[base_class(hooks(SceneHooks::new().push(Self::hook)))]
+#[derive(Debug, Default, Component)]
+struct PrototypeMaterial {
+	/// The identifier of this brush, such as 'wall' or 'floor'.\
+	/// This can be anything and will be used to generate the brush's colour.
+	name: Option<String>,
+}
+impl PrototypeMaterial {
+	fn hook(view: &mut QuakeClassSpawnView) -> anyhow::Result<()> {
+		let mut entity = view.world.entity_mut(view.entity);
+
+		let name = entity.get::<PrototypeMaterial>().unwrap().name.as_ref();
+
+		let get_pos = || {
+			let Some(xform) = entity.get::<Transform>() else {
+				return Ok(Vec3::ZERO)
+			};
+
+			let pos = xform.translation;
+			Ok::<_, anyhow::Error>(pos)
+		};
+
+		let color = match name {
+			Some(name) => name.as_str().color(),
+			None => get_pos()?.color(),
+		};
+
+		entity.insert(debug::PrototypeMaterial::new(color));
+
+		Ok(())
+	}
+}
+
+#[solid_class(base(FuncGeneric, PrototypeMaterial))]
+#[derive(Debug, Default, Component)]
+/// A prototype brush, to be assigned a random colour based one
+/// the name if one is provided, or its position otherwise.
+struct PrototypeBrush;
+
+#[point_class(base(Transform))]
 #[derive(Default, Component)]
 /// A parkin ball
 struct Ball {
@@ -40,26 +77,12 @@ impl Ball {
 		for (entity, ball, xform) in entities {
 			let pos = xform.map_or(Vec3::ZERO, |xform| xform.translation);
 
-			let [x, y, z] = [
-				pos.x.trunc(),
-				pos.y.trunc(),
-				pos.z.trunc(),
-			];
-
-			let [xf, yf, zf] = [
-				((pos.x.fract() - x) * 100.0) as i64,
-				((pos.y.fract() - y) * 100.0) as i64,
-				((pos.z.fract() - z) * 100.0) as i64,
-			];
-
-			let source = [(x as i64, xf), (y as i64, yf), (z as i64, zf)];
-
 			commands.entity(entity).insert((
 				LinearVelocity(ball.velocity),
 				RigidBody::Dynamic,
 				Collider::sphere(0.5),
 				Mesh3d(mesh.get_or_insert_with(|| meshes.add(Mesh::from(Sphere::new(0.5)))).clone()),
-				PrototypeMaterial::new(crate::debug::HashSource(source)),
+				debug::PrototypeMaterial::new(pos),
 			));
 		}
 	}
