@@ -5,8 +5,8 @@ use tracing::instrument;
 pub struct FpsPlayerPlugin;
 impl Plugin for FpsPlayerPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_systems(Update, Floater::update_velocity)
-		   .add_systems(Update, Floater::update_torque);
+		app.add_systems(FixedUpdate, Floater::update_velocity)
+		   .add_systems(FixedUpdate, Floater::update_torque);
 	}
 }
 
