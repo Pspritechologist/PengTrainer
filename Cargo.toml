@@ -20,5 +20,5 @@ random_color = "1.1.0"
 # smart-default = "0.7.1"
 
 # Enable a large amount of optimization in the dev profile for dependencies.
-# [profile.dev.package."*"]
-# opt-level = 3
+[profile.dev.package."*"]
+opt-level = 3
