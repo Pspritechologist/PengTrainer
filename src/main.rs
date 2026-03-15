@@ -1,5 +1,5 @@
-use avian3d::{PhysicsPlugins, prelude::{AngularVelocity, Collider, PhysicsDebugPlugin, RigidBody}};
 use bevy::{camera_controller::free_camera::{FreeCamera, FreeCameraPlugin}, prelude::*};
+use avian3d::prelude::*;
 use bevy_rts_camera::RtsCameraPlugin;
 use debug::PrototypeMaterial;
 
@@ -10,23 +10,47 @@ mod rts;
 fn main() {
 	let mut app = App::new();
 
-	app.add_plugins((DefaultPlugins, PhysicsPlugins::default()))
+	app.add_plugins((DefaultPlugins.set(WindowPlugin {
+		primary_window: Some(Window {
+			present_mode: bevy::window::PresentMode::AutoNoVsync,
+			resolution: (1920, 1080).into(),
+			mode: bevy::window::WindowMode::Windowed,
+			..Default::default()
+		}),
+		..Default::default()
+	}), PhysicsPlugins::default()))
 		.add_plugins(trenchbroom::Plugin)
 		.add_plugins((FreeCameraPlugin, RtsCameraPlugin))
-        // .add_plugins(bevy_inspector_egui::bevy_egui::EguiPlugin::default())
-        // .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new())
 		.add_plugins(debug::PrototypeMaterialPlugin)
-		.add_systems(PostStartup, setup);
+		.add_plugins(debug::InspectorPlugin);
 
 	if std::env::args_os().any(|a| a.eq_ignore_ascii_case("--phys-debug")) {
 		app.add_plugins(PhysicsDebugPlugin);
 	}
 
 	if std::env::args_os().any(|a| a.eq_ignore_ascii_case("--fps")) {
-		app.add_plugins(debug::fps_overlay());
+		app.add_plugins(debug::FpsOverlay);
 	}
 
+	app
+		.add_systems(FixedUpdate, throw_balls)
+		.add_systems(PostStartup, setup);
+
 	app.run();
+}
+
+fn throw_balls(
+	entities: Query<&mut LinearVelocity, With<trenchbroom::Ball>>,
+) {
+	for mut vel in entities {
+		if fastrand::f32() < 0.002 {
+			vel.0 += Vec3::new(
+				fastrand::f32() * 30.0 - 15.0,
+				fastrand::f32() * 10.0 - 6.5,
+				fastrand::f32() * 30.0 - 15.0,
+			);
+		}
+	}
 }
 
 fn setup(
@@ -34,6 +58,8 @@ fn setup(
 	mut meshes: ResMut<Assets<Mesh>>,
 	asset_server: Res<AssetServer>,
 ) {
+
+
 	commands.spawn((
 		SceneRoot(asset_server.load("maps/swampypeasants.map#Scene")),
 		Transform::from_xyz(0., 0., 0.,),
@@ -41,12 +67,10 @@ fn setup(
 	));
 
 	commands.spawn((
-		RigidBody::Dynamic,
 		Collider::cuboid(1.0, 1.0, 1.0),
-		AngularVelocity(Vec3::new(2.5, 3.5, 1.5)),
 		Mesh3d(meshes.add(Cuboid::from_length(1.0))),
 		PrototypeMaterial::new("cuboid"),
-		Transform::from_xyz(0.0, 20.0, 0.0),
+		Transform::from_xyz(0., 20., 0.),
 	));
 
 	// commands.spawn((
@@ -78,7 +102,7 @@ fn setup(
 
 	commands.spawn((
 		Camera3d::default(),
-		Transform::from_xyz(-7., 4.5, 20.0).looking_at(Vec3::new(-5.5, 4.5, 18.0), Vec3::Y),
+		Transform::from_xyz(-7., 4.5, 20.0).looking_at(Vec3::new(16., 4.5, 30.), Vec3::Y),
 		FreeCamera {
 			sensitivity: 0.2,
 			friction: 25.0,

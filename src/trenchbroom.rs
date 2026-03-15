@@ -15,7 +15,49 @@ impl bevy::prelude::Plugin for Plugin {
 				.global_transform_application(false)
 				.default_solid_scene_hooks(|| SceneHooks::new().convex_collider()))
 			))
-		.add_systems(PostUpdate, Ball::handle_spawn);
+		.register_type::<FlickeringLight>()
+		.add_systems(PostUpdate, Ball::handle_spawn)
+		.add_systems(FixedUpdate, FlickeringLight::update)
+		;
+	}
+}
+
+#[point_class(base(PointLight), group("light"))]
+#[derive(Debug, Default, Component)]
+struct FlickeringLight {
+	/// Chance for the light to turn off every second.
+	chance: f64,
+	/// Time the light will remain off when flickering in seconds.
+	time_off: f64,
+	#[class(ignore)]
+	off_time: Option<f64>,
+	#[class(ignore)]
+	last_intensity: f32,
+}
+impl FlickeringLight {
+	fn update(
+		query: Query<(&mut FlickeringLight, &mut PointLight)>,
+		time: Res<Time>,
+	) {
+		for (mut flickering, mut light) in query {
+			if let Some(off_time) = flickering.off_time.as_mut() {
+				*off_time -= time.delta_secs_f64();
+
+				if *off_time <= 0.0 {
+					flickering.off_time = None;
+					light.intensity = flickering.last_intensity;
+				}
+
+				continue
+			}
+
+			let chance = flickering.chance * time.delta_secs_f64();
+			if chance > fastrand::f64() {
+				flickering.last_intensity = light.intensity;
+				light.intensity = 0.0;
+				flickering.off_time = Some(flickering.time_off);
+			}
+		}
 	}
 }
 
@@ -32,18 +74,11 @@ impl PrototypeMaterial {
 
 		let name = entity.get::<PrototypeMaterial>().unwrap().name.as_ref();
 
-		let get_pos = || {
-			let Some(xform) = entity.get::<Transform>() else {
-				return Ok(Vec3::ZERO)
-			};
-
-			let pos = xform.translation;
-			Ok::<_, anyhow::Error>(pos)
-		};
-
 		let color = match name {
 			Some(name) => name.as_str().color(),
-			None => get_pos()?.color(),
+			None => {
+				entity.get::<Transform>().map_or(Vec3::ZERO, |xform| xform.translation).color()
+			},
 		};
 
 		entity.insert(debug::PrototypeMaterial::new(color));
@@ -61,7 +96,7 @@ struct PrototypeBrush;
 #[point_class(base(Transform))]
 #[derive(Default, Component)]
 /// A parkin ball
-struct Ball {
+pub struct Ball {
 	/// Nyooom.
 	velocity: Vec3,
 }
@@ -69,10 +104,10 @@ struct Ball {
 impl Ball {
 	fn handle_spawn(
 		mut commands: Commands,
-		entities: Query<(Entity, &Ball, Option<&Transform>), Changed<Ball>>,
+		entities: Query<(Entity, &Ball, Option<&Transform>), Added<Ball>>,
 		mut meshes: ResMut<Assets<Mesh>>,
 	) {
-		let mut mesh = None;
+		let mesh = meshes.add(Mesh::from(Sphere::new(0.5)));
 
 		for (entity, ball, xform) in entities {
 			let pos = xform.map_or(Vec3::ZERO, |xform| xform.translation);
@@ -81,7 +116,7 @@ impl Ball {
 				LinearVelocity(ball.velocity),
 				RigidBody::Dynamic,
 				Collider::sphere(0.5),
-				Mesh3d(mesh.get_or_insert_with(|| meshes.add(Mesh::from(Sphere::new(0.5)))).clone()),
+				Mesh3d(mesh.clone()),
 				debug::PrototypeMaterial::new(pos),
 			));
 		}
