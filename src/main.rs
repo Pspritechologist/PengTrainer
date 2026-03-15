@@ -6,6 +6,7 @@ use debug::PrototypeMaterial;
 mod debug;
 mod trenchbroom;
 mod rts;
+mod fps;
 
 fn main() {
 	let mut app = App::new();
@@ -33,6 +34,7 @@ fn main() {
 	}
 
 	app
+		.add_plugins(fps::FpsPlayerPlugin)
 		.add_systems(FixedUpdate, throw_balls)
 		.add_systems(PostStartup, setup);
 
@@ -71,6 +73,19 @@ fn setup(
 		Mesh3d(meshes.add(Cuboid::from_length(1.0))),
 		PrototypeMaterial::new("cuboid"),
 		Transform::from_xyz(0., 20., 0.),
+		fps::Floater::default(),
+	));
+
+	commands.spawn((
+		Collider::capsule(0.28, 0.7),
+		Mesh3d(meshes.add(Capsule3d::new(0.28, 0.7))),
+		PrototypeMaterial::new("parker"),
+		Transform::from_xyz(12., 6., 24.),
+		fps::Floater {
+			desired_height: 1.45,
+			// spring_strength: 0.0,
+			..Default::default()
+		},
 	));
 
 	// commands.spawn((
