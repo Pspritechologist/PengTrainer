@@ -60,8 +60,6 @@ fn setup(
 	mut meshes: ResMut<Assets<Mesh>>,
 	asset_server: Res<AssetServer>,
 ) {
-
-
 	commands.spawn((
 		SceneRoot(asset_server.load("maps/swampypeasants.map#Scene")),
 		Transform::from_xyz(0., 0., 0.,),
