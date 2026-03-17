@@ -891,6 +891,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_event_chain"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8f3581a5fa9d510015226d500f6d513352088a95e88b80f12034d72b0bfa762"
+dependencies = [
+ "bevy",
+ "bevy_event_chain_derive",
+]
+
+[[package]]
+name = "bevy_event_chain_derive"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d635a63af480ddd57f70079d102b4ec8b3a3c25d55729d62079eb3ab739136c"
+dependencies = [
+ "bevy_macro_utils",
+ "proc-macro-crate 3.5.0",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "bevy_feathers"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1381,6 +1404,29 @@ dependencies = [
  "smallvec",
  "thiserror 2.0.18",
  "tracing",
+]
+
+[[package]]
+name = "bevy_pretty_nice_input"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5bcb12a16e88817c053b7a7d0e99b08dd9211c98ef76fcc1c419d4e080da53cc"
+dependencies = [
+ "bevy",
+ "bevy_event_chain",
+ "bevy_pretty_nice_input_derive",
+ "paste",
+]
+
+[[package]]
+name = "bevy_pretty_nice_input_derive"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a7f3119cb9667d065e291287292596a733e37f4cbdf5f35ddb0af75829ea10e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -4933,6 +4979,7 @@ dependencies = [
  "avian3d",
  "bevy",
  "bevy-inspector-egui",
+ "bevy_pretty_nice_input",
  "bevy_rts_camera",
  "bevy_trenchbroom",
  "bevy_trenchbroom_avian",

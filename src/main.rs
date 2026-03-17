@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use bevy::{camera_controller::free_camera::{FreeCamera, FreeCameraPlugin}, prelude::*};
 use avian3d::prelude::*;
 use bevy_rts_camera::RtsCameraPlugin;
@@ -5,35 +7,39 @@ use debug::PrototypeMaterial;
 
 mod debug;
 mod trenchbroom;
+mod controller;
 mod rts;
 mod fps;
 
 fn main() {
 	let mut app = App::new();
 
-	app.add_plugins((DefaultPlugins.set(WindowPlugin {
-		primary_window: Some(Window {
-			present_mode: bevy::window::PresentMode::AutoNoVsync,
-			resolution: (1920, 1080).into(),
-			mode: bevy::window::WindowMode::Windowed,
+	app
+		.add_plugins(DefaultPlugins.set(WindowPlugin {
+			primary_window: Some(Window {
+				present_mode: bevy::window::PresentMode::AutoNoVsync,
+				resolution: (1920, 1080).into(),
+				mode: bevy::window::WindowMode::Windowed,
+				..Default::default()
+			}),
 			..Default::default()
-		}),
-		..Default::default()
-	}), PhysicsPlugins::default()))
+		}))
+		.add_plugins(PhysicsPlugins::default())
 		.add_plugins(trenchbroom::Plugin)
 		.add_plugins((FreeCameraPlugin, RtsCameraPlugin))
 		.add_plugins(debug::PrototypeMaterialPlugin)
 		.add_plugins(debug::InspectorPlugin);
 
-	if std::env::args_os().any(|a| a.eq_ignore_ascii_case("--phys-debug")) {
+	if std::env::args_os().any(|a| a == "--phys-debug") {
 		app.add_plugins(PhysicsDebugPlugin);
 	}
 
-	if std::env::args_os().any(|a| a.eq_ignore_ascii_case("--fps")) {
+	if std::env::args_os().any(|a| a == "--fps") {
 		app.add_plugins(debug::FpsOverlay);
 	}
 
 	app
+		.add_plugins(controller::Plugin)
 		.add_plugins(fps::FpsPlayerPlugin)
 		.add_systems(FixedUpdate, throw_balls)
 		.add_systems(PostStartup, setup);
@@ -74,17 +80,7 @@ fn setup(
 		fps::Floater::default(),
 	));
 
-	commands.spawn((
-		Collider::capsule(0.28, 0.7),
-		Mesh3d(meshes.add(Capsule3d::new(0.28, 0.7))),
-		PrototypeMaterial::new("parker"),
-		Transform::from_xyz(12., 6., 24.),
-		fps::Floater {
-			desired_height: 1.45,
-			// spring_strength: 0.0,
-			..Default::default()
-		},
-	));
+	commands.spawn(fps::player::player_bundle(&mut meshes));
 
 	// commands.spawn((
 	// 	Camera3d::default(),
@@ -115,6 +111,10 @@ fn setup(
 
 	commands.spawn((
 		Camera3d::default(),
+		Camera {
+			is_active: false,
+			..Default::default()
+		},
 		Transform::from_xyz(-7., 4.5, 20.0).looking_at(Vec3::new(16., 4.5, 30.), Vec3::Y),
 		FreeCamera {
 			sensitivity: 0.2,

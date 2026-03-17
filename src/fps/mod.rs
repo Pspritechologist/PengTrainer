@@ -2,15 +2,38 @@ use bevy::prelude::*;
 use avian3d::prelude::*;
 use tracing::instrument;
 
+pub mod player;
+
 pub struct FpsPlayerPlugin;
 impl Plugin for FpsPlayerPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_systems(FixedUpdate, Floater::update_velocity)
-		   .add_systems(FixedUpdate, Floater::update_torque);
+		app.add_systems(FixedUpdate, (
+			Floater::update_velocity,
+			Floater::update_torque,
+		));
 	}
 }
 
-#[derive(Clone, Copy, Debug, Component, Reflect)]
+#[derive(Debug, Clone, Copy, Component, Reflect)]
+#[require(crate::controller::MovementInput)]
+pub struct FloatMovement {
+	pub max_speed: f32,
+	pub acceleration: f32,
+	pub max_accel_force: f32,
+	goal_velocity: Vec3,
+}
+impl Default for FloatMovement {
+	fn default() -> Self {
+		Self {
+			max_speed: 10.0,
+			acceleration: 20.0,
+			max_accel_force: 100.0,
+			goal_velocity: Vec3::ZERO,
+		}
+	}
+}
+
+#[derive(Debug, Clone, Copy, Component, Reflect)]
 #[require(
 	RigidBody::Dynamic,
 	ConstantForce,
@@ -35,11 +58,14 @@ impl Default for Floater {
 		}
 	}
 }
-
 impl Floater {
 	#[instrument(skip_all)]
-	fn update_torque(floaters: Query<(Forces, &Floater)>) {
-		for (mut forces, floater) in floaters {
+	fn update_torque(floaters: Query<(
+		Forces,
+		&Floater,
+		Option<(&FloatMovement, &mut crate::controller::MovementInput)>,
+	)>) {
+		for (mut forces, floater, movement_comps) in floaters {
 			let current_rot = forces.rotation();
 			let to_goal = current_rot.mul_vec3(Vec3::Y);
 			
@@ -48,14 +74,20 @@ impl Floater {
 
 			let angular_vel = forces.angular_velocity();
 
-			let torque = (rot_axis * (rot_angle * floater.upright_strength)) - (angular_vel * floater.upright_dampner);
+			let mut torque = (rot_axis * (rot_angle * floater.upright_strength)) - (angular_vel * floater.upright_dampner);
 
 			if torque.is_nan() {
-				trace!("Skipping NaN torque: {torque}");
-				continue;
+				torque = Vec3::ZERO;
 			}
 
 			trace!("Applying torque ({rot_axis} * {rot_angle} * {}) - ({angular_vel} * {}) = {torque}", floater.upright_strength, floater.upright_dampner);
+
+			if let Some((float_move, target)) = movement_comps {
+				let look_torque = -target.look * float_move.max_speed;
+				// look_torque should rotate with the y axis, but not the x or z.
+				trace!("Adding look torque: {look_torque}");
+				torque += look_torque;
+			}
 
 			forces.apply_torque(torque);
 		}
@@ -63,18 +95,20 @@ impl Floater {
 
 	#[instrument(skip_all)]
 	fn update_velocity(
+		time: Res<Time>,
 		mut gizmos: Gizmos,
 		spatial: SpatialQuery,
 		floaters: Query<(
 			Entity,
 			&Floater,
 			&mut ConstantForce,
+			Option<(&mut FloatMovement, &crate::controller::MovementInput)>,
 		)>,
 		mut forces: Query<Forces>,
 	) {
 		let down = Vec3::NEG_Y;
 
-		for (floater_ent, &floater, mut force) in floaters {
+		for (floater_ent, &floater, mut force, movement_comps) in floaters {
 			let xform = forces.get_mut(floater_ent).unwrap();
 
 			let global_pos = **xform.position();
@@ -114,6 +148,22 @@ impl Floater {
 			let alpha = (force_amount * 0.9) + 0.1;
 
 			gizmos.ray(global_pos, Vec3::NEG_Y * floater.desired_height, LinearRgba::RED.with_alpha(alpha));
+
+			if let Some((mut float_move, target)) = movement_comps {
+				let desired_speed = target.movement * float_move.max_speed;
+				float_move.goal_velocity = desired_speed.move_towards(
+					float_move.goal_velocity + ground_vel,
+					float_move.acceleration * time.delta_secs(),
+				);
+
+				let max_accel = float_move.max_accel_force;
+				let needed_accel = ((float_move.goal_velocity - vel) / time.delta_secs())
+					.clamp_length_max(max_accel);
+
+				debug!("Applying movement accel: {needed_accel} \n\tgoal: {}\n\tvel: {vel}\n\tground_vel: {ground_vel})", float_move.goal_velocity);
+
+				forces.get_mut(floater_ent).unwrap().apply_linear_acceleration(needed_accel);
+			}
 		}
 	}
 }
