@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use avian3d::prelude::*;
-use bevy_pretty_nice_input::prelude::*;
 
 use crate::debug::PrototypeMaterial;
 use crate::fps::{Floater, FloatMovement};

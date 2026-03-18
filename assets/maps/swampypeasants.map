@@ -1826,3 +1826,129 @@
 "_tb_id" "16"
 "_tb_layer_sort_index" "4"
 }
+// entity 19
+{
+"classname" "ball"
+"origin" "-1544 -888 16"
+"_tb_layer" "16"
+}
+// entity 20
+{
+"classname" "ball"
+"origin" "-1576 -872 16"
+"_tb_layer" "16"
+}
+// entity 21
+{
+"classname" "ball"
+"origin" "-1608 -856 16"
+"_tb_layer" "16"
+}
+// entity 22
+{
+"classname" "ball"
+"origin" "-1608 -808 16"
+"_tb_layer" "16"
+}
+// entity 23
+{
+"classname" "ball"
+"origin" "-1608 -712 16"
+"_tb_layer" "16"
+}
+// entity 24
+{
+"classname" "ball"
+"origin" "-1528 -760 16"
+"_tb_layer" "16"
+}
+// entity 25
+{
+"classname" "ball"
+"origin" "-1608 -936 16"
+"_tb_layer" "16"
+}
+// entity 26
+{
+"classname" "ball"
+"origin" "-1576 -888 64"
+"_tb_layer" "16"
+}
+// entity 27
+{
+"classname" "ball"
+"origin" "-1608 -872 64"
+"_tb_layer" "16"
+}
+// entity 28
+{
+"classname" "ball"
+"origin" "-1640 -856 64"
+"_tb_layer" "16"
+}
+// entity 29
+{
+"classname" "ball"
+"origin" "-1640 -808 64"
+"_tb_layer" "16"
+}
+// entity 30
+{
+"classname" "ball"
+"origin" "-1640 -712 64"
+"_tb_layer" "16"
+}
+// entity 31
+{
+"classname" "ball"
+"origin" "-1560 -760 64"
+"_tb_layer" "16"
+}
+// entity 32
+{
+"classname" "ball"
+"origin" "-1640 -936 64"
+"_tb_layer" "16"
+}
+// entity 33
+{
+"classname" "ball"
+"origin" "-1608 -872 32"
+"_tb_layer" "16"
+}
+// entity 34
+{
+"classname" "ball"
+"origin" "-1640 -856 32"
+"_tb_layer" "16"
+}
+// entity 35
+{
+"classname" "ball"
+"origin" "-1672 -840 32"
+"_tb_layer" "16"
+}
+// entity 36
+{
+"classname" "ball"
+"origin" "-1672 -792 32"
+"_tb_layer" "16"
+}
+// entity 37
+{
+"classname" "ball"
+"origin" "-1672 -696 32"
+"_tb_layer" "16"
+}
+// entity 38
+{
+"classname" "ball"
+"origin" "-1592 -744 32"
+"_tb_layer" "16"
+}
+// entity 39
+{
+"classname" "ball"
+"origin" "-1672 -920 32"
+"_tb_layer" "16"
+}
