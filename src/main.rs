@@ -10,6 +10,7 @@ mod trenchbroom;
 mod controller;
 mod rts;
 mod fps;
+mod utils;
 
 mod scratch;
 
@@ -41,6 +42,7 @@ fn main() {
 	}
 
 	app
+		.add_plugins(utils::UtilsPlugin)
 		.add_plugins(controller::Plugin)
 		.add_plugins(fps::FpsPlayerPlugin)
 		.add_plugins(scratch::Plugin)
