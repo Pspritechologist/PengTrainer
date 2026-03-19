@@ -63,7 +63,7 @@ fn setup(
 		RigidBody::Static,
 	));
 
-	let player = commands.spawn(fps::player::player_bundle(&mut meshes)).id();
+	let player = fps::player::spawn_player(&mut commands, &mut meshes);
 
 	commands.spawn((
 		Name::new("Cuboid"),

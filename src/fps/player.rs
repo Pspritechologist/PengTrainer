@@ -5,10 +5,24 @@ use avian3d::prelude::*;
 use crate::controller::input_handler::*;
 use crate::debug::PrototypeMaterial;
 use crate::fps::{Floater, FloatMovement};
-use crate::utils::{TransformPropagateFrom, TransformPropagate};
+use crate::utils::{TransformPropagate, TransformPropagateTo};
 
-pub fn player_bundle(meshes: &mut Assets<Mesh>) -> impl Bundle {
-	(
+pub fn spawn_player(commands: &mut Commands, meshes: &mut Assets<Mesh>) -> Entity {
+	let camera = commands.spawn((
+		Camera3d::default(),
+		Transform::from_translation(Vec3::new(0., 0., -0.12)),
+		Projection::Perspective(PerspectiveProjection {
+			fov: 90.0f32.to_radians(),
+			..Default::default()
+		}),
+	)).id();
+	
+	let head = commands.spawn((
+		Transform::from_translation(Vec3::new(0., 0.5, 0.)),
+		TransformPropagate::full().without_rotation(),
+	)).add_child(camera).id();
+
+	commands.spawn((
 		Name::new("Parker"),
 		Collider::capsule(0.28, 0.7),
 		Mesh3d(meshes.add(Capsule3d::new(0.28, 0.7))),
@@ -21,7 +35,7 @@ pub fn player_bundle(meshes: &mut Assets<Mesh>) -> impl Bundle {
 			..Default::default()
 		},
 		FloatMovement::default(),
-		FpsPlayerInput::default(),
+		FpsPlayerInput::default().with_xform_target(camera),
 		actions!(FpsPlayerInput[
 			(
 				Action::<Movement>::new(),
@@ -39,16 +53,5 @@ pub fn player_bundle(meshes: &mut Assets<Mesh>) -> impl Bundle {
 				],
 			),
 		]),
-		related!(TransformPropagateFrom[
-			(
-				Camera3d::default(),
-				Transform::from_translation(Vec3::new(0., 0.5, -0.12)),
-				Projection::Perspective(PerspectiveProjection {
-					fov: 90.0f32.to_radians(),
-					..Default::default()
-				}),
-				TransformPropagate::full().without_rotation(),
-			),
-		]),
-	)
+	)).add_one_related::<TransformPropagateTo>(head).id()
 }
