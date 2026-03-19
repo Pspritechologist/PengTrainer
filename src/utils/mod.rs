@@ -1,4 +1,4 @@
-use bevy::app::{App, FixedUpdate};
+use bevy::{app::{App, PostUpdate}, ecs::schedule::IntoScheduleConfigs, transform::TransformSystems};
 
 pub use transform_prop::*;
 
@@ -9,7 +9,7 @@ impl bevy::prelude::Plugin for UtilsPlugin {
 	fn build(&self, app: &mut App) {
 		app
 			// Xform prop.
-			.add_systems(FixedUpdate, transform_prop::update)
+			.add_systems(PostUpdate, transform_prop::update.after(TransformSystems::Propagate))
 		;
 	}
 }

@@ -3,97 +3,94 @@ use bevy::prelude::*;
 #[derive(Debug, Clone, Default, Component, Reflect)]
 #[reflect(Component, Debug, Clone, Default)]
 #[relationship_target(relationship = TransformPropagateTo, linked_spawn)]
+#[require(Transform)]
 pub struct TransformPropagateFrom(Vec<Entity>);
 
 #[derive(Debug, Clone, Copy, Component, Reflect)]
-#[reflect(Component, Debug, Clone, Default)]
+#[reflect(Component, Debug, Clone)]
 #[relationship(relationship_target = TransformPropagateFrom)]
-pub struct TransformPropagateTo {
-	#[relationship]
-	master: Entity,
-	pub translation: Vec3,
-	pub rotation: Quat,
-	pub scale: Vec3,
+#[require(TransformPropagate, Transform)]
+pub struct TransformPropagateTo(Entity);
+
+#[derive(Debug, Clone, Copy, Component, Reflect)]
+#[reflect(Component, Debug, Clone, Default)]
+pub struct TransformPropagate {
+	pub translation: Option<Vec3>,
+	pub rotation: Option<Quat>,
+	pub scale: Option<Vec3>,
 }
 
-impl Default for TransformPropagateTo {
+impl Default for TransformPropagate {
 	fn default() -> Self {
 		Self::full()
 	}
 }
-
-impl TransformPropagateTo {
+impl TransformPropagate {
 	pub fn none() -> Self {
 		Self {
-			master: Entity::PLACEHOLDER,
-			translation: Vec3::ZERO,
-			rotation: Quat::IDENTITY,
-			scale: Vec3::ONE,
+			translation: None,
+			rotation: None,
+			scale: None,
 		}
 	}
 	pub fn full() -> Self {
 		Self {
-			master: Entity::PLACEHOLDER,
-			translation: Vec3::ONE,
-			rotation: Quat::IDENTITY,
-			scale: Vec3::ONE,
+			translation: Some(Vec3::ZERO),
+			rotation: Some(Quat::IDENTITY),
+			scale: Some(Vec3::ZERO),
 		}
 	}
 
 	pub fn without_translation(mut self) -> Self {
-		self.translation = Vec3::ZERO;
+		self.translation = None;
 		self
 	}
 	pub fn without_rotation(mut self) -> Self {
-		self.rotation = Quat::IDENTITY;
+		self.rotation = None;
 		self
 	}
 	pub fn without_scale(mut self) -> Self {
-		self.scale = Vec3::ONE;
+		self.scale = None;
 		self
 	}
 
-	pub fn with_translation(mut self, translation: Vec3) -> Self {
-		self.translation = translation;
+	pub fn with_translation_offset(mut self, translation: Vec3) -> Self {
+		self.translation = Some(translation);
 		self
 	}
-	pub fn with_rotation(mut self, rotation: Quat) -> Self {
-		self.rotation = rotation;
+	pub fn with_rotation_offset(mut self, rotation: Quat) -> Self {
+		self.rotation = Some(rotation);
 		self
 	}
-	pub fn with_scale(mut self, scale: Vec3) -> Self {
-		self.scale = scale;
+	pub fn with_scale_offset(mut self, scale: Vec3) -> Self {
+		self.scale = Some(scale);
 		self
 	}
 
 	pub fn with_full_translation(self) -> Self {
-		self.with_translation(Vec3::ONE)
+		self.with_translation_offset(Vec3::ZERO)
 	}
 	pub fn with_full_rotation(self) -> Self {
-		self.with_rotation(Quat::IDENTITY)
+		self.with_rotation_offset(Quat::IDENTITY)
 	}
 	pub fn with_full_scale(self) -> Self {
-		self.with_scale(Vec3::ONE)
+		self.with_scale_offset(Vec3::ZERO)
 	}
 }
 
 pub fn update(
-	masters: Populated<(Entity, &TransformPropagateFrom), Changed<Transform>>,
-	mut params: ParamSet<(
-		Query<&Transform>,
-		Query<(&TransformPropagateTo, &mut Transform)>,
-	)>
+	mut commands: Commands,
+	masters: Populated<(&TransformPropagateFrom, &Transform), Changed<Transform>>,
+	slaves: Query<(Entity, &TransformPropagate, &Transform)>,
 ) {
-	for (master, master_from) in masters {
-		let master_xform = *params.p0().get(master).unwrap();
-		let mut xforms = params.p1();
-		let mut slaves = xforms.iter_many_mut(&master_from.0);
-		while let Some((slave_to, mut slave_xform)) = slaves.fetch_next() {
-			*slave_xform = Transform {
-				translation: master_xform.translation * slave_to.translation,
-				rotation: master_xform.rotation * slave_to.rotation,
-				scale: master_xform.scale * slave_to.scale,
-			};
+	for (master_from, master_xform) in masters {
+		let mut slaves = slaves.iter_many(&master_from.0);
+		while let Some((slave, slave_to, slave_xform)) = slaves.fetch_next() {
+			commands.entity(slave).insert(Transform {
+				translation: slave_to.translation.map(|o| master_xform.translation + o).unwrap_or(slave_xform.translation),
+				rotation: slave_to.rotation.map(|o| master_xform.rotation + o).unwrap_or(slave_xform.rotation),
+				scale: slave_to.scale.map(|o| master_xform.scale + o).unwrap_or(slave_xform.scale),
+			});
 		}
 	}
 }

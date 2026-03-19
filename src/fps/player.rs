@@ -5,7 +5,7 @@ use avian3d::prelude::*;
 use crate::controller::input_handler::*;
 use crate::debug::PrototypeMaterial;
 use crate::fps::{Floater, FloatMovement};
-use crate::utils::{TransformPropagateFrom, TransformPropagateTo};
+use crate::utils::{TransformPropagateFrom, TransformPropagate};
 
 pub fn player_bundle(meshes: &mut Assets<Mesh>) -> impl Bundle {
 	(
@@ -47,7 +47,7 @@ pub fn player_bundle(meshes: &mut Assets<Mesh>) -> impl Bundle {
 					fov: 90.0f32.to_radians(),
 					..Default::default()
 				}),
-				TransformPropagateTo::full().without_rotation(),
+				TransformPropagate::full().without_rotation(),
 			),
 		]),
 	)
