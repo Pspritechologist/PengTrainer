@@ -15,18 +15,15 @@ pub fn player_bundle(meshes: &mut Assets<Mesh>) -> impl Bundle {
 		Transform::from_xyz(12., 6., 24.),
 		Floater {
 			desired_height: 1.45,
-			// spring_strength: 0.0,
+			spring_strength: 24.0,
+			spring_damp: 0.15,
 			..Default::default()
 		},
 		FloatMovement::default(),
-		crate::controller::MovementInput::default(),
+		FpsPlayerInput::default(),
 		actions!(FpsPlayerInput[
 			(
 				Action::<Movement>::new(),
-				DeadZone::default(),
-				// SmoothNudge::default(),
-				// DeltaScale::default(),
-				// Scale::splat(30.),
 				Bindings::spawn((
 					Cardinal::wasd_keys(),
 					Axial::left_stick(),
@@ -34,19 +31,17 @@ pub fn player_bundle(meshes: &mut Assets<Mesh>) -> impl Bundle {
 			),
 			(
 				Action::<Look>::new(),
-				DeadZone::default(),
-				SmoothNudge::default(),
-				// DeltaScale::default(),
-				// Scale::splat(30.),
-				Bindings::spawn((
-					Spawn(Binding::mouse_motion()),
-					Axial::right_stick(),
-				)),
+				bindings![
+					Binding::mouse_motion(),
+					(GamepadAxis::RightStickX, Scale::splat(5.0)),
+					(GamepadAxis::RightStickY, Scale::splat(5.0), Negate::all(), SwizzleAxis::YXZ),
+				],
 			),
 		]),
 		children![
 			(
 				Camera3d::default(),
+				Transform::from_translation(Vec3::new(0., 0.5, -0.12)),
 				Projection::Perspective(PerspectiveProjection {
 					fov: 90.0f32.to_radians(),
 					..Default::default()

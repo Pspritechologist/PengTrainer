@@ -160,7 +160,7 @@ impl Floater {
 				let needed_accel = ((float_move.goal_velocity - vel) / time.delta_secs())
 					.clamp_length_max(max_accel);
 
-				// debug!("Applying movement accel: {needed_accel} \n\tgoal: {}\n\tvel: {vel}\n\tground_vel: {ground_vel})", float_move.goal_velocity);
+				debug!("Applying movement accel: {needed_accel} \n\tgoal: {}\n\tvel: {vel}\n\tground_vel: {ground_vel})", float_move.goal_velocity);
 
 				forces.get_mut(floater_ent).unwrap().apply_linear_acceleration(needed_accel);
 			}

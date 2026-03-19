@@ -1,4 +1,4 @@
-use bevy::{input::InputSystems, prelude::*};
+use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use tracing::instrument;
 
@@ -10,50 +10,73 @@ impl Plugin for PlayerInputPlugin {
 		app.add_plugins(EnhancedInputPlugin)
 			.add_input_context::<FpsPlayerInput>()
 			.add_input_context::<RtsPlayerInput>()
-			.add_systems(PreUpdate, FpsPlayerInput::update.after(InputSystems))
-			.add_systems(FixedPostUpdate, FpsPlayerInput::post_update);
+			.add_systems(FixedPostUpdate, FpsPlayerInput::post_update)
+			.add_observer(FpsPlayerInput::on_move_input)
+			.add_observer(FpsPlayerInput::on_look_input)
+			;
 	}
 }
 
-#[derive(Debug, Clone, Copy, Default, Component, Reflect)]
-#[require(Name::new("FpsPlayerInput"))]
-pub struct FpsPlayerInput;
+#[derive(Debug, Clone, Copy, Component, Reflect)]
+pub struct FpsPlayerInput {
+	look_sensitivity: f32,
+}
+impl Default for FpsPlayerInput {
+	fn default() -> Self {
+		Self { look_sensitivity: 0.01 }
+	}
+}
 
 impl FpsPlayerInput {
 	#[instrument(skip_all)]
-	fn update(
+	fn on_move_input(
+		move_input: On<Fire<Movement>>,
 		query: Query<(
-			&Actions<FpsPlayerInput>,
+			Option<&Transform>,
+			&mut MovementInput,
+		), With<FpsPlayerInput>>,
+	) {
+		let Ok((xform, mut target)) = query.get_inner(move_input.context) else {
+			return;
+		};
+		
+		debug!("Move input: {}", move_input.value);
+
+		// -z Forwards, +z Backwards, -x Left, +x Right
+		let mut movement = move_input.value.xxy() * Vec3::new(1., 0., -1.);
+
+		if let Some(xform) = xform {
+			movement = xform.rotation.mul_vec3(movement);
+		}
+
+		target.movement = movement; //? Gets overwritten.
+	}
+
+	#[instrument(skip_all)]
+	fn on_look_input(
+		look_input: On<Fire<Look>>,
+		query: Query<(
+			&FpsPlayerInput,
 			Option<&Transform>,
 			&mut MovementInput,
 		)>,
-		move_inputs: Query<&Action<Movement>>,
-		look_inputs: Query<&Action<Look>>,
 	) {
-		for (actions, xform, mut target) in query {
-			// -z Forwards, +z Backwards, -x Left, +x Right
-			let mut movement = move_inputs.iter_many(actions)
-				.next()
-				.map(|move_input| move_input.yxx().with_y(0.))
-				.unwrap_or_default();
+		let Ok((player_input, xform, mut target)) = query.get_inner(look_input.context) else {
+			return;
+		};
 
-			if let Some(xform) = xform {
-				movement = xform.rotation.mul_vec3(movement);
-			}
+		debug!("Look input: {}", look_input.value);
+		let mut look = look_input.value.yxx().with_z(0.) * player_input.look_sensitivity;
 
-			// let look = look_input.yxx().with_z(0.);
-			let look = look_inputs.iter_many(actions)
-				.next()
-				.map(|look_input| look_input.yxx().with_z(0.) * 0.002)
-				.unwrap_or_default();
-
-			target.movement = movement; //? Gets overwritten.
-			target.look += look; //? Gets accumulated.
+		if let Some(xform) = xform {
+			look = xform.rotation.mul_vec3(look);
 		}
+
+		target.look += look; //? Gets accumulated.
 	}
 
 	fn post_update(
-		query: Query<&mut MovementInput, With<FpsPlayerInput>>,
+		query: Query<&mut MovementInput, (With<FpsPlayerInput>, Changed<MovementInput>)>,
 	) {
 		for mut target in query {
 			target.movement = Vec3::ZERO;
