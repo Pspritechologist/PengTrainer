@@ -19,24 +19,31 @@ impl Plugin for PlayerInputPlugin {
 
 #[derive(Debug, Clone, Copy, Component, Reflect)]
 pub struct FpsPlayerInput {
-	look_sensitivity: f32,
+	pub look_sensitivity: f32,
+	pub transform_target: Option<Entity>,
 }
 impl Default for FpsPlayerInput {
 	fn default() -> Self {
-		Self { look_sensitivity: 0.01 }
+		Self {
+			look_sensitivity: 0.01,
+			transform_target: None,
+		}
 	}
 }
 
 impl FpsPlayerInput {
+	pub fn with_xform_target(mut self, target: Entity) -> Self {
+		self.transform_target = Some(target);
+		self
+	}
+
 	#[instrument(skip_all)]
 	fn on_move_input(
 		move_input: On<Fire<Movement>>,
-		query: Query<(
-			Option<&Transform>,
-			&mut MovementInput,
-		), With<FpsPlayerInput>>,
+		query: Query<(Entity, &FpsPlayerInput, &mut MovementInput)>,
+		xforms: Query<&Transform>,
 	) {
-		let Ok((xform, mut target)) = query.get_inner(move_input.context) else {
+		let Ok((ent, player_input, mut target)) = query.get_inner(move_input.context) else {
 			return;
 		};
 		
@@ -45,9 +52,13 @@ impl FpsPlayerInput {
 		// -z Forwards, +z Backwards, -x Left, +x Right
 		let mut movement = move_input.value.xxy() * Vec3::new(1., 0., -1.);
 
-		if let Some(xform) = xform {
-			movement = xform.rotation.mul_vec3(movement);
-		}
+		let xform_target = player_input.transform_target.unwrap_or(ent);
+		let target_xform = match xforms.get(xform_target) {
+			Ok(xform) => xform,
+			Err(e) => return warn!("Failed to get Entity of `target_xform`: {e}"),
+		};
+
+		movement = target_xform.rotation.mul_vec3(movement);
 
 		target.movement = movement; //? Gets overwritten.
 	}
