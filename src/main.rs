@@ -55,6 +55,7 @@ fn setup(
 	asset_server: Res<AssetServer>,
 ) {
 	commands.spawn((
+		Name::new("SwampyPeasants"),
 		SceneRoot(asset_server.load("maps/swampypeasants.map#Scene")),
 		Transform::from_xyz(0., 0., 0.,),
 		RigidBody::Static,
@@ -63,12 +64,29 @@ fn setup(
 	let player = commands.spawn(fps::player::player_bundle(&mut meshes)).id();
 
 	commands.spawn((
+		Name::new("Cuboid"),
 		Collider::cuboid(1.0, 1.0, 1.0),
 		Mesh3d(meshes.add(Cuboid::from_length(1.0))),
 		PrototypeMaterial::new("cuboid"),
 		Transform::from_xyz(0., 20., 0.),
 		fps::Floater::default(),
 		fps::FloatMovement::default(),
-		FollowEntity(player),
+		// FollowEntity(player),
 	));
+
+	// commands.spawn((
+	// 	Camera3d::default(),
+	// 	Camera {
+	// 		is_active: false,
+	// 		..Default::default()
+	// 	},
+	// 	Transform::from_xyz(-7., 4.5, 20.0).looking_at(Vec3::new(16., 4.5, 30.), Vec3::Y),
+	// 	FreeCamera {
+	// 		sensitivity: 0.2,
+	// 		friction: 25.0,
+	// 		walk_speed: 3.0,
+	// 		run_speed: 9.0,
+	// 		..default()
+	// 	},
+	// ));
 }
