@@ -4,18 +4,29 @@ use tracing::instrument;
 
 pub mod player;
 
-pub struct FpsPlayerPlugin;
-impl Plugin for FpsPlayerPlugin {
+pub struct MovementPlugin;
+impl Plugin for MovementPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_systems(FixedUpdate, (
-			Floater::update_velocity,
-			Floater::update_torque,
-		));
+		app.add_plugins(player::PlayerInputPlugin)
+			.add_systems(FixedUpdate, (
+				Floater::update_velocity,
+				Floater::update_torque,
+			));
 	}
 }
 
+#[derive(Debug, Clone, Copy, Default, Component, Reflect)]
+pub struct MovementInput {
+	/// The direction to be moved towards, as an absolute vector.\
+	/// Note that this is *not* relative to the Entity.
+	pub move_direction: Vec3,
+	/// The position to be looked towards, as an absolute vector.\
+	/// Note that this is *not* relative to the Entity.
+	pub look_target: Vec3,
+}
+
 #[derive(Debug, Clone, Copy, Component, Reflect)]
-#[require(crate::controller::MovementInput)]
+#[require(MovementInput)]
 pub struct FloatMovement {
 	pub max_speed: f32,
 	pub acceleration: f32,
@@ -63,7 +74,7 @@ impl Floater {
 	fn update_torque(floaters: Query<(
 		Forces,
 		&Floater,
-		Option<(&FloatMovement, &mut crate::controller::MovementInput)>,
+		Option<(&FloatMovement, &mut MovementInput)>,
 	)>) {
 		for (mut forces, floater, movement_comps) in floaters {
 			let current_rot = forces.rotation();
@@ -102,7 +113,7 @@ impl Floater {
 			Entity,
 			&Floater,
 			&mut ConstantForce,
-			Option<(&mut FloatMovement, &crate::controller::MovementInput)>,
+			Option<(&mut FloatMovement, &MovementInput)>,
 		)>,
 		mut forces: Query<Forces>,
 	) {

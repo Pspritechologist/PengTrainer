@@ -3,7 +3,7 @@
 
 use bevy::prelude::*;
 use avian3d::prelude::LinearVelocity;
-use crate::controller;
+use crate::movement;
 
 pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
@@ -27,12 +27,12 @@ fn throw_balls(
 }
 
 #[derive(Debug, Clone, Copy, Component, Reflect)]
-#[require(GlobalTransform, controller::MovementInput)]
+#[require(GlobalTransform, movement::MovementInput)]
 pub struct FollowEntity(pub Entity);
 impl FollowEntity {
 	#[tracing::instrument(skip_all)]
 	fn update(
-		query: Query<(Entity, &FollowEntity, &mut controller::MovementInput)>,
+		query: Query<(Entity, &FollowEntity, &mut movement::MovementInput)>,
 		xforms: Query<&GlobalTransform>,
 	) {
 		for (ent, follow, mut target) in query {

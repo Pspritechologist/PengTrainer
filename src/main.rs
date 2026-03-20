@@ -1,15 +1,12 @@
 #![allow(clippy::type_complexity)]
 
-use bevy::{camera_controller::free_camera::FreeCameraPlugin, prelude::*};
+use bevy::prelude::*;
 use avian3d::prelude::*;
-use bevy_rts_camera::RtsCameraPlugin;
 use debug::PrototypeMaterial;
 
 mod debug;
 mod trenchbroom;
-mod controller;
-mod rts;
-mod fps;
+mod movement;
 mod utils;
 
 mod scratch;
@@ -28,8 +25,9 @@ fn main() {
 			..Default::default()
 		}))
 		.add_plugins(PhysicsPlugins::default())
+		.add_plugins(bevy_enhanced_input::EnhancedInputPlugin)
 		.add_plugins(trenchbroom::Plugin)
-		.add_plugins((FreeCameraPlugin, RtsCameraPlugin))
+		.add_plugins((bevy::camera_controller::free_camera::FreeCameraPlugin, bevy_rts_camera::RtsCameraPlugin))
 		.add_plugins(debug::PrototypeMaterialPlugin)
 		.add_plugins(debug::InspectorPlugin);
 
@@ -43,8 +41,7 @@ fn main() {
 
 	app
 		.add_plugins(utils::UtilsPlugin)
-		.add_plugins(controller::Plugin)
-		.add_plugins(fps::FpsPlayerPlugin)
+		.add_plugins(movement::MovementPlugin)
 		.add_plugins(scratch::Plugin)
 		.add_systems(PostStartup, setup);
 
@@ -63,7 +60,7 @@ fn setup(
 		RigidBody::Static,
 	));
 
-	let player = fps::player::spawn_player(&mut commands, &mut meshes);
+	let player = movement::player::spawn_player(&mut commands, &mut meshes);
 
 	commands.spawn((
 		Name::new("Cuboid"),
@@ -71,15 +68,15 @@ fn setup(
 		Mesh3d(meshes.add(Cuboid::from_length(1.0))),
 		PrototypeMaterial::new("cuboid"),
 		Transform::from_xyz(0., 20., 0.),
-		fps::Floater::default(),
-		fps::FloatMovement::default(),
-		// FollowEntity(player),
+		movement::Floater::default(),
+		movement::FloatMovement::default(),
+		// scratch::FollowEntity(player),
 	));
 
 	// commands.spawn((
 	// 	Camera3d::default(),
 	// 	Camera {
-	// 		is_active: false,
+	// 		is_active: true,
 	// 		..Default::default()
 	// 	},
 	// 	Transform::from_xyz(-7., 4.5, 20.0).looking_at(Vec3::new(16., 4.5, 30.), Vec3::Y),
