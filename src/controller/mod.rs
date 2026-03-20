@@ -11,6 +11,10 @@ impl bevy::prelude::Plugin for Plugin {
 
 #[derive(Debug, Clone, Copy, Default, Component, Reflect)]
 pub struct MovementInput {
-	pub movement: Vec3,
-	pub look: Vec3,
+	/// The direction to be moved towards, as an absolute vector.\
+	/// Note that this is *not* relative to the Entity.
+	pub move_direction: Vec3,
+	/// The position to be looked towards, as an absolute vector.\
+	/// Note that this is *not* relative to the Entity.
+	pub look_target: Vec3,
 }

@@ -60,7 +60,7 @@ impl FpsPlayerInput {
 
 		movement = target_xform.rotation.mul_vec3(movement);
 
-		target.movement = movement; //? Gets overwritten.
+		target.move_direction = movement; //? Gets overwritten.
 	}
 
 	#[instrument(skip_all)]
@@ -83,15 +83,15 @@ impl FpsPlayerInput {
 			look = xform.rotation.mul_vec3(look);
 		}
 
-		target.look += look; //? Gets accumulated.
+		target.look_target += look; //? Gets accumulated.
 	}
 
 	fn post_update(
 		query: Query<&mut MovementInput, (With<FpsPlayerInput>, Changed<MovementInput>)>,
 	) {
 		for mut target in query {
-			target.movement = Vec3::ZERO;
-			target.look = Vec3::ZERO;
+			target.move_direction = Vec3::ZERO;
+			target.look_target = Vec3::ZERO;
 		}
 	}
 }

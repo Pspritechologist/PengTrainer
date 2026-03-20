@@ -83,7 +83,7 @@ impl Floater {
 			trace!("Applying torque ({rot_axis} * {rot_angle} * {}) - ({angular_vel} * {}) = {torque}", floater.upright_strength, floater.upright_dampner);
 
 			if let Some((float_move, target)) = movement_comps {
-				let look_torque = -target.look * float_move.max_speed;
+				let look_torque = -target.look_target * float_move.max_speed;
 				// look_torque should rotate with the y axis, but not the x or z.
 				trace!("Adding look torque: {look_torque}");
 				torque += look_torque;
@@ -150,7 +150,7 @@ impl Floater {
 			gizmos.ray(global_pos, Vec3::NEG_Y * floater.desired_height, LinearRgba::RED.with_alpha(alpha));
 
 			if let Some((mut float_move, target)) = movement_comps {
-				let desired_speed = target.movement * float_move.max_speed;
+				let desired_speed = target.move_direction * float_move.max_speed;
 				float_move.goal_velocity = desired_speed.move_towards(
 					float_move.goal_velocity + ground_vel,
 					float_move.acceleration * time.delta_secs(),

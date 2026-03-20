@@ -50,7 +50,7 @@ impl FollowEntity {
 			
 			trace!("Following Entity {}: Target Pos: {target_pos}, Current Pos: {pos}, Movement: {movement}", follow.0);
 
-			target.movement = movement;
+			target.move_direction = movement;
 		}
 	}
 }
