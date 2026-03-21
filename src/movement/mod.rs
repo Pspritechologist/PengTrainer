@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use avian3d::prelude::*;
+use avian3d::prelude::{forces::ForcesItem, *};
 use tracing::instrument;
 
 pub mod player;
@@ -10,7 +10,8 @@ impl Plugin for MovementPlugin {
 		app.add_plugins(player::PlayerInputPlugin)
 			.add_systems(FixedUpdate, (
 				Floater::update_velocity,
-				Floater::update_torque,
+				Floater::update_torque_upright,
+				Floater::update_torque_target,
 			));
 	}
 }
@@ -71,37 +72,52 @@ impl Default for Floater {
 }
 impl Floater {
 	#[instrument(skip_all)]
-	fn update_torque(floaters: Query<(
-		Forces,
-		&Floater,
-		Option<(&FloatMovement, &mut MovementInput)>,
-	)>) {
-		for (mut forces, floater, movement_comps) in floaters {
+	fn update_torque_upright(floaters: Populated<(Forces, &Floater), Without<MovementInput>>) {
+		for (mut forces, floater) in floaters {
 			let current_rot = forces.rotation();
 			let to_goal = current_rot.mul_vec3(Vec3::Y);
 			
-			let rot_axis = to_goal.cross(Vec3::Y).normalize();
-			let rot_angle = to_goal.angle_between(Vec3::Y);
-
-			let angular_vel = forces.angular_velocity();
-
-			let mut torque = (rot_axis * (rot_angle * floater.upright_strength)) - (angular_vel * floater.upright_dampner);
-
-			if torque.is_nan() {
-				torque = Vec3::ZERO;
-			}
-
-			trace!("Applying torque ({rot_axis} * {rot_angle} * {}) - ({angular_vel} * {}) = {torque}", floater.upright_strength, floater.upright_dampner);
-
-			if let Some((float_move, target)) = movement_comps {
-				let look_torque = -target.look_target * float_move.max_speed;
-				// look_torque should rotate with the y axis, but not the x or z.
-				trace!("Adding look torque: {look_torque}");
-				torque += look_torque;
-			}
-
-			forces.apply_torque(torque);
+			let axis = to_goal.cross(Vec3::Y).normalize();
+			let angle = to_goal.angle_between(Vec3::Y);
+			
+			floater.update_torque_inner(&mut forces, axis, angle);
 		}
+	}
+
+	#[instrument(skip_all)]
+	fn update_torque_target(floaters: Populated<(
+		Forces,
+		&GlobalTransform,
+		&Floater,
+		&MovementInput,
+	)>) {
+		for (mut forces, glob_xform, floater, target) in floaters {
+			let look_at_pos = target.look_target;
+			let look_from_pos = glob_xform.translation();
+			let to_target = (look_at_pos - look_from_pos).normalize();
+			
+			let desired_rot = Transform::default().looking_to(to_target, Vec3::Y).rotation;
+			let current_rot = *forces.rotation();
+			let rot_diff = desired_rot * current_rot.conjugate();
+			let rot_diff = if rot_diff.w < 0.0 { -rot_diff } else { rot_diff };
+			let (axis, angle) = rot_diff.to_axis_angle();
+
+			floater.update_torque_inner(&mut forces, axis, angle);
+		}
+	}
+
+	fn update_torque_inner(&self, forces: &mut ForcesItem, axis: Vec3, angle: f32) {
+		let angular_vel = forces.angular_velocity();
+
+		let mut torque = (axis * (angle * self.upright_strength)) - (angular_vel * self.upright_dampner);
+
+		if torque.is_nan() {
+			torque = Vec3::ZERO;
+		}
+
+		trace!("Applying torque ({axis} * {angle} * {}) - ({angular_vel} * {}) = {torque}", self.upright_strength, self.upright_dampner);
+
+		forces.apply_torque(torque);
 	}
 
 	#[instrument(skip_all)]

@@ -12,8 +12,9 @@ impl Plugin for PlayerInputPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_input_context::<FpsPlayerInput>()
 			.add_observer(FpsPlayerInput::on_move_input)
+			.add_observer(FpsPlayerInput::on_release_move_input)
 			.add_observer(FpsPlayerInput::on_look_input)
-			;
+			.add_systems(Update, FpsPlayerInput::handle_look);
 	}
 }
 
@@ -45,7 +46,7 @@ pub fn spawn_player(commands: &mut Commands, meshes: &mut Assets<Mesh>) -> Entit
 			..Default::default()
 		},
 		FloatMovement::default(),
-		FpsPlayerInput { look_sensitivity: 0.01, head, camera },
+		FpsPlayerInput { look_sensitivity: 0.007, head, camera },
 		actions!(FpsPlayerInput[
 			(
 				Action::<Movement>::new(),
@@ -100,26 +101,53 @@ impl FpsPlayerInput {
 	}
 
 	#[instrument(skip_all)]
+	fn on_release_move_input(
+		observer: On<Complete<Movement>>,
+		query: Query<&mut MovementInput, With<FpsPlayerInput>>,
+	) {
+		let Ok(mut target) = query.get_inner(observer.context) else {
+			return;
+		};
+
+		debug!("Move input released");
+
+		target.move_direction = Vec3::ZERO;
+	}
+
+	#[instrument(skip_all)]
 	fn on_look_input(
 		look_input: On<Fire<Look>>,
-		query: Query<(
-			&FpsPlayerInput,
-			&mut MovementInput,
-		)>,
-		mut xforms: Query<(&mut Transform, &GlobalTransform)>,
+		query: Query<&FpsPlayerInput>,
+		mut xforms: Query<&mut Transform>,
 	) {
-		let Ok((player_input, mut target)) = query.get_inner(look_input.context) else {
+		let Ok(player_input) = query.get_inner(look_input.context) else {
 			return;
 		};
 
 		debug!("Look input: {}", look_input.value);
 
-		xforms.get_mut(player_input.head).unwrap().0.rotate_y(look_input.value.x * player_input.look_sensitivity);
+		xforms.get_mut(player_input.head).unwrap().rotate_y(look_input.value.x * player_input.look_sensitivity);
 		
-		let (mut cam_xform, cam_glob_xform) = xforms.get_mut(player_input.camera).unwrap();
-		cam_xform.rotate_x(look_input.value.y * player_input.look_sensitivity);
+		let mut cam_xform = xforms.get_mut(player_input.camera).unwrap();
+		
+		let (_, mut cam_rot_x, _) = cam_xform.rotation.to_euler(EulerRot::YXZ);
+		cam_rot_x += look_input.value.y * player_input.look_sensitivity;
+		cam_xform.rotation = Quat::from_euler(EulerRot::XYZ, cam_rot_x.clamp(-89.9f32.to_radians(), 89.9f32.to_radians()), 0., 0.);
+	}
 
-		target.look_target = cam_glob_xform.translation() + *cam_glob_xform.forward();
+	#[instrument(skip_all)]
+	fn handle_look(
+		query: Query<(&FpsPlayerInput, &mut MovementInput)>,
+		xforms: Query<&GlobalTransform>,
+	) {
+		for (player_input, mut target) in query {
+			let cam_glob_xform = match xforms.get(player_input.camera) {
+				Ok(xform) => xform,
+				Err(e) => return warn!("Failed to get Entity of `target_xform`: {e}"),
+			};
+
+			target.look_target = cam_glob_xform.translation() + *cam_glob_xform.forward();
+		}
 	}
 }
 
