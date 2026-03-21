@@ -37,7 +37,7 @@ pub struct FloatMovement {
 impl Default for FloatMovement {
 	fn default() -> Self {
 		Self {
-			max_speed: 10.0,
+			max_speed: 6.0,
 			acceleration: 20.0,
 			max_accel_force: 100.0,
 			goal_velocity: Vec3::ZERO,

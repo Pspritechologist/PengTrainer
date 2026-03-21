@@ -21,6 +21,12 @@ impl Plugin for PlayerInputPlugin {
 pub fn spawn_player(commands: &mut Commands, meshes: &mut Assets<Mesh>) -> Entity {
 	let camera = commands.spawn((
 		Camera3d::default(),
+		// bevy::camera::Exposure::from_physical_camera(bevy::camera::PhysicalCameraParameters {
+		// 	aperture_f_stops: 1.0,
+		// 	shutter_speed_s: 1.0 / 125.0,
+		// 	sensitivity_iso: 100.0,
+		// 	sensor_height: 0.01866,
+		// }),
 		Transform::from_translation(Vec3::new(0., 0., -0.12)),
 		Projection::Perspective(PerspectiveProjection {
 			fov: 90.0f32.to_radians(),

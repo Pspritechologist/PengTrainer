@@ -76,11 +76,12 @@ fn setup(
 	// commands.spawn((
 	// 	Camera3d::default(),
 	// 	Camera {
-	// 		is_active: true,
+	// 		// is_active: false,
+	// 		order: 100,
 	// 		..Default::default()
 	// 	},
 	// 	Transform::from_xyz(-7., 4.5, 20.0).looking_at(Vec3::new(16., 4.5, 30.), Vec3::Y),
-	// 	FreeCamera {
+	// 	bevy::camera_controller::free_camera::FreeCamera {
 	// 		sensitivity: 0.2,
 	// 		friction: 25.0,
 	// 		walk_speed: 3.0,
