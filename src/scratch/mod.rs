@@ -8,13 +8,15 @@ use crate::movement;
 pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
 	fn build(&self, app: &mut App) {
-		app.add_systems(FixedUpdate, (throw_balls, FollowEntity::update));
+		app
+			.add_systems(FixedUpdate, (throw_balls, FollowEntity::update))
+			.add_systems(Update, daylight_cycle)
+			.add_systems(PostStartup, setup_env)
+		;
 	}
 }
 
-fn throw_balls(
-	entities: Query<&mut LinearVelocity, With<crate::trenchbroom::Ball>>,
-) {
+fn throw_balls(entities: Query<&mut LinearVelocity, With<crate::trenchbroom::Ball>>) {
 	for mut vel in entities {
 		if fastrand::f32() < 0.002 {
 			vel.0 += Vec3::new(
@@ -24,6 +26,31 @@ fn throw_balls(
 			);
 		}
 	}
+}
+
+fn daylight_cycle(mut sun_xform: Single<&mut Transform, With<DirectionalLight>>, time: Res<Time>) {
+	sun_xform.rotate_x(-time.delta_secs() * std::f32::consts::PI / (10.0 * 60.0));
+}
+
+fn setup_env(mut commands: Commands) {
+	commands.insert_resource(ClearColor(Color::BLACK));
+	commands.insert_resource(GlobalAmbientLight::NONE);
+
+	commands.spawn((
+		DirectionalLight {
+			..Default::default()
+		},
+		Transform::from_xyz(0.8, 2., -1.).looking_at(Vec3::ZERO, Vec3::Y),
+		bevy::light::VolumetricLight,
+		bevy::light::CascadeShadowConfigBuilder {
+			..Default::default()
+		}.build(),
+	));
+
+	commands.spawn((
+		bevy::light::FogVolume::default(),
+		Transform::from_scale(Vec3::new(10., 1., 10.)).with_translation(Vec3::Y * 0.5),
+	));
 }
 
 #[derive(Debug, Clone, Copy, Component, Reflect)]

@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-use bevy::prelude::*;
+use bevy::{math::VectorSpace, prelude::*};
 use avian3d::prelude::*;
 use debug::PrototypeMaterial;
 
@@ -51,6 +51,7 @@ fn main() {
 fn setup(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
+	mut scattering_mediums: ResMut<Assets<bevy::pbr::ScatteringMedium>>,
 	asset_server: Res<AssetServer>,
 ) {
 	commands.spawn((
@@ -60,7 +61,7 @@ fn setup(
 		RigidBody::Static,
 	));
 
-	let player = movement::player::spawn_player(&mut commands, &mut meshes);
+	let player = movement::player::spawn_player(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), &mut meshes);
 
 	commands.spawn((
 		Name::new("Cuboid"),

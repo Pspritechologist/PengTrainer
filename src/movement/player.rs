@@ -1,3 +1,4 @@
+use bevy::pbr::{Atmosphere, ScatteringMedium};
 use bevy::prelude::*;
 use bevy_enhanced_input::prelude::*;
 use avian3d::prelude::*;
@@ -18,7 +19,7 @@ impl Plugin for PlayerInputPlugin {
 	}
 }
 
-pub fn spawn_player(commands: &mut Commands, meshes: &mut Assets<Mesh>) -> Entity {
+pub fn spawn_player(commands: &mut Commands, scattering_medium: Handle<ScatteringMedium>, meshes: &mut Assets<Mesh>) -> Entity {
 	let camera = commands.spawn((
 		Camera3d::default(),
 		// bevy::camera::Exposure::from_physical_camera(bevy::camera::PhysicalCameraParameters {
@@ -32,6 +33,7 @@ pub fn spawn_player(commands: &mut Commands, meshes: &mut Assets<Mesh>) -> Entit
 			fov: 90.0f32.to_radians(),
 			..Default::default()
 		}),
+		Atmosphere::earthlike(scattering_medium),
 	)).id();
 	
 	let head = commands.spawn((
@@ -47,8 +49,8 @@ pub fn spawn_player(commands: &mut Commands, meshes: &mut Assets<Mesh>) -> Entit
 		Transform::from_xyz(12., 6., 24.),
 		Floater {
 			desired_height: 1.45,
-			spring_strength: 24.0,
-			spring_damp: 0.15,
+			spring_strength: 48.0,
+			spring_damp: 0.001,
 			..Default::default()
 		},
 		FloatMovement::default(),
