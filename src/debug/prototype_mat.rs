@@ -187,7 +187,7 @@ impl Material for PrototypeMaterialAsset {
 
 fn initialization(
 	mut commands: Commands,
-	entities: Query<(Entity, &PrototypeMaterial), Changed<PrototypeMaterial>>,
+	entities: Populated<(Entity, &PrototypeMaterial), Changed<PrototypeMaterial>>,
 	asset_server: Res<AssetServer>,
 	mut shaders: ResMut<Assets<Shader>>,
 	mut materials: ResMut<Assets<PrototypeMaterialAsset>>,
