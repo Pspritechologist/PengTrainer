@@ -177,19 +177,25 @@ impl Floater {
 			gizmos.ray(global_pos, Vec3::NEG_Y * floater.desired_height, LinearRgba::RED.with_alpha(alpha));
 
 			if let Some((mut float_move, target)) = movement_comps {
+				// The ideal velocity to have right now, based on our inputs.
 				let desired_speed = target.move_direction * float_move.max_speed;
-				float_move.goal_velocity = desired_speed.move_towards(
-					float_move.goal_velocity + ground_vel,
+
+				// Move our current 'goal velocity' towards the ideal velocity based on our acceleration.
+				float_move.goal_velocity = float_move.goal_velocity.move_towards(
+					desired_speed + ground_vel,
 					float_move.acceleration * time.delta_secs(),
 				);
 
-				let max_accel = float_move.max_accel_force;
-				let needed_accel = ((float_move.goal_velocity - vel) / time.delta_secs())
-					.clamp_length_max(max_accel);
 
-				debug!("Applying movement accel: {needed_accel} \n\tgoal: {}\n\tvel: {vel}\n\tground_vel: {ground_vel})", float_move.goal_velocity);
+				// Calculate the amount of force required to move from our current velocity to our goal velocity in a single tick.
+				let velocity_difference = float_move.goal_velocity - vel;
+				let needed_force = velocity_difference / time.delta_secs();
+				// ... Limited by the maximum force of our acceleration.
+				let needed_force = needed_force.clamp_length_max(float_move.max_accel_force);
 
-				forces.get_mut(floater_ent).unwrap().apply_linear_acceleration(needed_accel);
+				debug!("Applying movement accel: {needed_force} \n\tgoal: {}\n\tvel: {vel}\n\tground_vel: {ground_vel})", float_move.goal_velocity);
+
+				forces.get_mut(floater_ent).unwrap().apply_linear_acceleration(needed_force);
 			}
 		}
 	}
