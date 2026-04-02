@@ -1,5 +1,5 @@
-use bevy::pbr::{Atmosphere, ScatteringMedium};
 use bevy::prelude::*;
+use bevy::pbr::{Atmosphere, ScatteringMedium};
 use bevy_enhanced_input::prelude::*;
 use avian3d::prelude::*;
 use tracing::instrument;
@@ -15,7 +15,10 @@ impl Plugin for PlayerInputPlugin {
 			.add_observer(FpsPlayerInput::on_move_input)
 			.add_observer(FpsPlayerInput::on_release_move_input)
 			.add_observer(FpsPlayerInput::on_look_input)
-			.add_systems(Update, FpsPlayerInput::handle_look);
+			.add_observer(LockMouse::on_lock)
+			.add_observer(Reset::on_reset)
+			.add_systems(Update, FpsPlayerInput::handle_look)
+		;
 	}
 }
 
@@ -71,6 +74,8 @@ pub fn spawn_player(commands: &mut Commands, scattering_medium: Handle<Scatterin
 					(GamepadAxis::RightStickY, Scale::splat(5.0), Negate::all(), SwizzleAxis::YXZ),
 				],
 			),
+			(Action::<LockMouse>::new(), bindings![KeyCode::Escape]),
+			(Action::<Reset>::new(), bindings![KeyCode::KeyR]),
 		]),
 	)).add_one_related::<TransformPropagateTo>(head).id()
 }
@@ -159,7 +164,6 @@ impl FpsPlayerInput {
 	}
 }
 
-
 #[derive(InputAction)]
 #[action_output(Vec2)]
 pub struct Movement;
@@ -167,3 +171,24 @@ pub struct Movement;
 #[derive(InputAction)]
 #[action_output(Vec2)]
 pub struct Look;
+
+#[derive(InputAction)]
+#[action_output(bool)]
+pub struct LockMouse;
+impl LockMouse {
+	#[instrument(skip_all)]
+	fn on_lock(_input: On<Complete<LockMouse>>, mut cursor: Single<&mut bevy::window::CursorOptions, With<Window>>) {
+		cursor.visible = !cursor.visible;
+		cursor.grab_mode = if cursor.visible { bevy::window::CursorGrabMode::None } else { bevy::window::CursorGrabMode::Locked };
+	}
+}
+
+#[derive(InputAction)]
+#[action_output(bool)]
+pub struct Reset;
+impl Reset {
+	#[instrument(skip_all)]
+	fn on_reset(input: On<Start<Reset>>, mut commands: Commands) {
+		commands.entity(input.context).insert(Transform::from_xyz(16., 2., 26.));
+	}
+}
