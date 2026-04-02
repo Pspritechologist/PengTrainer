@@ -19,7 +19,7 @@ impl bevy::prelude::Plugin for Plugin {
 		.add_systems(PostUpdate, Ball::handle_spawn)
 		.add_systems(PostUpdate, Cube::handle_spawn)
 		.add_systems(FixedUpdate, FlickeringLight::update)
-		.add_systems(PostUpdate, PrototypeMaterial::on_added)
+		.add_systems(PostUpdate, add_dynamic_colliders)
 		;
 	}
 }
@@ -63,7 +63,7 @@ impl FlickeringLight {
 	}
 }
 
-#[base_class]
+#[base_class(hooks = Self::hooks())]
 #[derive(Debug, Default, Component, Reflect)]
 #[reflect(Debug, Default, Component)]
 struct PrototypeMaterial {
@@ -72,17 +72,23 @@ struct PrototypeMaterial {
 	name: Option<String>,
 }
 impl PrototypeMaterial {
-	fn on_added(mut commands: Commands, query: Populated<(Entity, &PrototypeMaterial, Option<&Transform>), Changed<PrototypeMaterial>>) {
-		for (ent, prototype_mat, xform) in query {
-			let color = match prototype_mat.name.as_ref() {
+	fn hooks() -> SceneHooks {
+		SceneHooks::new().push(move |view| {
+			let entity = view.world.entity(view.entity);
+			let name = entity.get::<PrototypeMaterial>().unwrap().name.as_ref();
+			let color = match name {
 				Some(name) => name.as_str().color(),
 				None => {
-					xform.map_or(Vec3::ZERO, |xform| xform.translation).color()
+					entity.get::<Transform>().map_or(Vec3::ZERO, |xform| xform.translation).color()
 				},
 			};
-	
-			commands.entity(ent).insert(debug::PrototypeMaterial::new(color));
-		}
+
+			for mesh_view in view.meshes.iter() {
+				view.world.entity_mut(mesh_view.entity).insert(debug::PrototypeMaterial::new(color));
+			}
+
+			Ok(())
+		})
 	}
 }
 
@@ -92,6 +98,36 @@ impl PrototypeMaterial {
 /// A prototype brush, to be assigned a random colour based one
 /// the name if one is provided, or its position otherwise.
 struct PrototypeBrush;
+
+#[solid_class(base(PrototypeMaterial), hooks = rigid_hooks())]
+#[derive(Debug, Default, Component)]
+#[reflect(Debug, Default, Component)]
+struct RigidBrush;
+fn rigid_hooks() -> SceneHooks {
+	SceneHooks::new().meshes_with(DynamicCollider)
+}
+
+#[derive(Debug, Clone, Default, Component, Reflect)]
+#[reflect(Debug, Clone, Default, Component)]
+struct DynamicCollider;
+fn add_dynamic_colliders(
+	mut commands: Commands,
+	query: Query<(Entity, &Mesh3d), (With<DynamicCollider>, Without<Collider>)>,
+	meshes: Res<Assets<Mesh>>,
+) {
+	for (entity, mesh3d) in &query {
+		let Some(mesh) = meshes.get(mesh3d.id()) else {
+			continue;
+		};
+
+		let Some(collider) = Collider::trimesh_from_mesh(mesh) else {
+			error!("Entity {entity} has TrimeshCollision, but index buffer or vertex buffer of the mesh are in an incompatible format.");
+			continue;
+		};
+
+		commands.entity(entity).insert((collider, RigidBody::Dynamic));
+	}
+}
 
 #[point_class(
 	base(Transform, PrototypeMaterial),
@@ -162,7 +198,7 @@ impl Cube {
 		for entity in entities {
 			commands.entity(entity).insert((
 				RigidBody::Dynamic,
-				Collider::cuboid(0.75, 0.75, 0.75),
+				Collider::cuboid(0.90, 0.90, 0.90),
 				Mesh3d(mesh.clone()),
 			));
 		}
