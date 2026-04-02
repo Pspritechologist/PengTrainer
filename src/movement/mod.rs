@@ -165,8 +165,9 @@ impl Floater {
 			trace!("Applying force {} at {global_pos}", down * spring_force);
 
 			if let Some(mut forces) = ground {
-				let push_force = down * -spring_force;
-				forces.apply_force_at_point(push_force, hit.normal);
+				let push_force = down * spring_force;
+				trace!("Applying push force {push_force} at {} to Entity {}", hit.normal, hit.entity);
+				forces.apply_force_at_point(-push_force, hit.normal + **forces.position());
 			}
 
 			// Draw a line the length of the Raycast, coloured based on the force being used.
