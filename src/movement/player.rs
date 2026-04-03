@@ -37,6 +37,16 @@ pub fn spawn_player(commands: &mut Commands, scattering_medium: Handle<Scatterin
 			..Default::default()
 		}),
 		Atmosphere::earthlike(scattering_medium),
+		bevy::camera::Exposure { ev100: 13.0 },
+		bevy::post_process::bloom::Bloom::NATURAL,
+		bevy::light::AtmosphereEnvironmentMapLight::default(),
+		bevy::light::VolumetricFog {
+			ambient_intensity: 0.0,
+			..Default::default()
+		},
+		Msaa::Off,
+		bevy::anti_alias::fxaa::Fxaa::default(),
+		bevy::pbr::ScreenSpaceReflections::default(),
 	)).id();
 	
 	let head = commands.spawn((
