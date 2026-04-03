@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-use bevy::{math::VectorSpace, prelude::*};
+use bevy::prelude::*;
 use avian3d::prelude::*;
 use debug::PrototypeMaterial;
 
@@ -24,6 +24,10 @@ fn main() {
 			}),
 			..Default::default()
 		}))
+		.insert_resource(bevy_egui::EguiGlobalSettings {
+			enable_absorb_bevy_input_system: true,
+			..Default::default()
+		})
 		.add_plugins(PhysicsPlugins::default())
 		.add_plugins(bevy_enhanced_input::EnhancedInputPlugin)
 		.add_plugins(trenchbroom::Plugin)
