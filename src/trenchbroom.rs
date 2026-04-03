@@ -83,6 +83,7 @@ impl PrototypeMaterial {
 				},
 			};
 
+			view.world.entity_mut(view.entity).insert(debug::PrototypeMaterial::new(color));
 			for mesh_view in view.meshes.iter() {
 				view.world.entity_mut(mesh_view.entity).insert(debug::PrototypeMaterial::new(color));
 			}
