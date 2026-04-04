@@ -10,7 +10,6 @@ impl bevy::prelude::Plugin for Plugin {
 	fn build(&self, app: &mut App) {
 		app
 			.add_systems(FixedUpdate, (throw_balls, FollowEntity::update))
-			.add_systems(Update, daylight_cycle)
 			.add_systems(PostStartup, setup_env)
 		;
 	}
@@ -26,10 +25,6 @@ fn throw_balls(entities: Query<&mut LinearVelocity, With<crate::trenchbroom::Bal
 			);
 		}
 	}
-}
-
-fn daylight_cycle(mut sun_xform: Single<&mut Transform, With<DirectionalLight>>, time: Res<Time>) {
-	sun_xform.rotate_x(-time.delta_secs() * std::f32::consts::PI / (10.0 * 60.0));
 }
 
 fn setup_env(mut commands: Commands) {
