@@ -1,7 +1,7 @@
 //! Somewhere for code to live temporarily while it's worked on, before it's cemented and a place for it is found.
 //! Mostly just prevents making a bunch of temporary modules while committing stuff.
 
-use bevy::prelude::*;
+use bevy::{camera::visibility::NoFrustumCulling, prelude::*};
 use avian3d::prelude::LinearVelocity;
 use crate::movement;
 
@@ -32,12 +32,14 @@ fn daylight_cycle(mut sun_xform: Single<&mut Transform, With<DirectionalLight>>,
 	sun_xform.rotate_x(-time.delta_secs() * std::f32::consts::PI / (10.0 * 60.0));
 }
 
-fn setup_env(mut commands: Commands) {
+fn setup_env(mut commands: Commands, asset_server: Res<AssetServer>) {
 	commands.insert_resource(ClearColor(Color::BLACK));
 	commands.insert_resource(GlobalAmbientLight::NONE);
 
 	commands.spawn((
 		DirectionalLight {
+			illuminance: 32000.0,
+			shadows_enabled: true,
 			..Default::default()
 		},
 		Transform::from_xyz(0.8, 2., -1.).looking_at(Vec3::ZERO, Vec3::Y),
@@ -48,8 +50,15 @@ fn setup_env(mut commands: Commands) {
 	));
 
 	commands.spawn((
-		bevy::light::FogVolume::default(),
-		Transform::from_scale(Vec3::new(10., 1., 10.)).with_translation(Vec3::Y * 0.5),
+		bevy::light::FogVolume {
+			absorption: 1.0,
+			density_factor: 1.0,
+			density_texture: Some(asset_server.load("bunny.ktx2")),
+			scattering: 1.0,
+			..Default::default()
+		},
+		Transform::from_xyz(9.5, 3.3, 0.0).with_scale(Vec3::new(6.0, 6.0, 6.0)),
+		NoFrustumCulling,
 	));
 }
 

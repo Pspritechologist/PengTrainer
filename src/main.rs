@@ -52,8 +52,15 @@ fn setup(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut scattering_mediums: ResMut<Assets<bevy::pbr::ScatteringMedium>>,
+	mut gizmo_store: ResMut<GizmoConfigStore>,
 	asset_server: Res<AssetServer>,
 ) {
+
+	if std::env::args_os().any(|a| a == "--light-debug") {
+		let (_, light_config) = gizmo_store.config_mut::<LightGizmoConfigGroup>();
+		light_config.draw_all = true;
+	}
+
 	commands.spawn((
 		Name::new("SwampyPeasants"),
 		SceneRoot(asset_server.load("maps/swampypeasants.map#Scene")),

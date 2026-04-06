@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::pbr::{Atmosphere, ScatteringMedium};
+use bevy::render::view::Hdr;
 use bevy_enhanced_input::prelude::*;
 use avian3d::prelude::*;
 use tracing::instrument;
@@ -41,12 +42,14 @@ pub fn spawn_player(commands: &mut Commands, scattering_medium: Handle<Scatterin
 		bevy::post_process::bloom::Bloom::NATURAL,
 		bevy::light::AtmosphereEnvironmentMapLight::default(),
 		bevy::light::VolumetricFog {
+			step_count: 128,
 			ambient_intensity: 0.0,
 			..Default::default()
 		},
 		Msaa::Off,
 		bevy::anti_alias::fxaa::Fxaa::default(),
 		bevy::pbr::ScreenSpaceReflections::default(),
+		Hdr,
 	)).id();
 	
 	let head = commands.spawn((
