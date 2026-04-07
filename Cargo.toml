@@ -14,6 +14,7 @@ bevy_trenchbroom = { version = "0.12.0", features = ["physics-integration"] }
 bevy_trenchbroom_avian = "0.12.0"
 bevy-inspector-egui = "0.36.0"
 bevy_rts_camera = "0.13.0"
+bevy_egui = { version = "0.39.1", default-features = false }
 
 tracing = "0.1.0"
 fastrand = "2.3.0"
