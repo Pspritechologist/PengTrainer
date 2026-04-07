@@ -1,3 +1,5 @@
+use std::ops::Neg;
+
 use bevy::prelude::*;
 use avian3d::prelude::{forces::ForcesItem, *};
 use tracing::instrument;
@@ -32,6 +34,10 @@ pub struct FloatMovement {
 	pub max_speed: f32,
 	pub acceleration: f32,
 	pub max_accel_force: f32,
+	/// How fast one can change directions.\ 
+	/// Added to acceleration as catchup when changing directions.\
+	/// > "This baby turns on a dime!"
+	pub dimeyness: f32,
 	goal_velocity: Vec3,
 }
 impl Default for FloatMovement {
@@ -40,6 +46,7 @@ impl Default for FloatMovement {
 			max_speed: 6.0,
 			acceleration: 20.0,
 			max_accel_force: 100.0,
+			dimeyness: 20.0,
 			goal_velocity: Vec3::ZERO,
 		}
 	}
@@ -126,7 +133,7 @@ impl Floater {
 		mut gizmos: Gizmos,
 		spatial: SpatialQuery,
 		floaters: Query<(
-			Entity,
+			NameOrEntity,
 			&Floater,
 			&mut ConstantForce,
 			Option<(&mut FloatMovement, &MovementInput)>,
@@ -136,12 +143,12 @@ impl Floater {
 		let down = Vec3::NEG_Y;
 
 		for (floater_ent, &floater, mut force, movement_comps) in floaters {
-			let xform = forces.get_mut(floater_ent).unwrap();
+			let xform = forces.get_mut(floater_ent.entity).unwrap();
 
 			let global_pos = **xform.position();
-			let vel = xform.linear_velocity();
+			let velocity = xform.linear_velocity();
 
-			let filter = SpatialQueryFilter::from_excluded_entities([floater_ent]);
+			let filter = SpatialQueryFilter::from_excluded_entities([floater_ent.entity]);
 			let hit = spatial.cast_ray(global_pos, Dir3::NEG_Y, floater.desired_height, false, &filter);
 			let Some(hit) = hit else {
 				force.0 = Vec3::ZERO;
@@ -153,7 +160,7 @@ impl Floater {
 
 			let ground_vel = ground.as_ref().map_or(Vec3::ZERO, |f| f.linear_velocity());
 
-			let floater_dir_vel = down.dot(vel);
+			let floater_dir_vel = down.dot(velocity);
 			let ground_dir_vel = down.dot(ground_vel);
 			let relative_vel = ground_dir_vel - floater_dir_vel;
 
@@ -180,23 +187,26 @@ impl Floater {
 			if let Some((mut float_move, target)) = movement_comps {
 				// The ideal velocity to have right now, based on our inputs.
 				let desired_speed = target.move_direction * float_move.max_speed;
+				let target_velocity = desired_speed + ground_vel;
+				let accel_mod = (velocity.normalize_or_zero() - target_velocity.normalize_or_zero()).length();
+				let acceleration = float_move.acceleration + (accel_mod * float_move.dimeyness);
 
 				// Move our current 'goal velocity' towards the ideal velocity based on our acceleration.
 				float_move.goal_velocity = float_move.goal_velocity.move_towards(
 					desired_speed + ground_vel,
-					float_move.acceleration * time.delta_secs(),
+					acceleration * time.delta_secs(),
 				);
 
 
 				// Calculate the amount of force required to move from our current velocity to our goal velocity in a single tick.
-				let velocity_difference = float_move.goal_velocity - vel;
+				let velocity_difference = float_move.goal_velocity - velocity;
 				let needed_force = velocity_difference / time.delta_secs();
 				// ... Limited by the maximum force of our acceleration.
 				let needed_force = needed_force.clamp_length_max(float_move.max_accel_force);
 
-				debug!("Applying movement accel: {needed_force} \n\tgoal: {}\n\tvel: {vel}\n\tground_vel: {ground_vel})", float_move.goal_velocity);
+				debug!("Applying movement accel: {needed_force} \n\tgoal: {}\n\tvel: {velocity}\n\tground_vel: {ground_vel})", float_move.goal_velocity);
 
-				forces.get_mut(floater_ent).unwrap().apply_linear_acceleration(needed_force);
+				forces.get_mut(floater_ent.entity).unwrap().apply_linear_acceleration(needed_force);
 			}
 		}
 	}
