@@ -6,6 +6,7 @@ use tracing::instrument;
 
 use crate::debug::PrototypeMaterial;
 use crate::movement::{FloatMovement, Floater, MovementInput};
+use crate::scratch::{inventory as inv, list_inv};
 use crate::utils::{TransformPropagate, TransformPropagateTo};
 
 pub struct PlayerInputPlugin;
@@ -17,20 +18,21 @@ impl Plugin for PlayerInputPlugin {
 			.add_observer(FpsPlayerInput::on_look_input)
 			.add_observer(LockMouse::on_lock)
 			.add_observer(Reset::on_reset)
+			.add_observer(Grab::on_grab)
 			.add_systems(Update, FpsPlayerInput::handle_look)
 		;
 	}
 }
 
+#[derive(Debug, Clone, Copy, Component, Reflect)]
+struct Player {
+	head: Entity,
+	camera: Entity,
+}
+
 pub fn spawn_player<'a>(commands: &'a mut Commands, scattering_medium: Handle<ScatteringMedium>, meshes: &mut Assets<Mesh>) -> EntityCommands<'a> {
 	let camera = commands.spawn((
 		Camera3d::default(),
-		// bevy::camera::Exposure::from_physical_camera(bevy::camera::PhysicalCameraParameters {
-		// 	aperture_f_stops: 1.0,
-		// 	shutter_speed_s: 1.0 / 125.0,
-		// 	sensitivity_iso: 100.0,
-		// 	sensor_height: 0.01866,
-		// }),
 		Transform::from_translation(Vec3::new(0., 0., -0.12)),
 		Projection::Perspective(PerspectiveProjection {
 			fov: 90.0f32.to_radians(),
@@ -56,6 +58,8 @@ pub fn spawn_player<'a>(commands: &'a mut Commands, scattering_medium: Handle<Sc
 
 	let mut player_cmds = commands.spawn((
 		Name::new("Parker"),
+		Player { camera, head },
+		list_inv::ListInv { },
 		Collider::capsule(0.28, 0.7),
 		Mesh3d(meshes.add(Capsule3d::new(0.28, 0.7))),
 		PrototypeMaterial::new("parker"),
@@ -85,6 +89,8 @@ pub fn spawn_player<'a>(commands: &'a mut Commands, scattering_medium: Handle<Sc
 			),
 			(Action::<LockMouse>::new(), bindings![KeyCode::Escape]),
 			(Action::<Reset>::new(), bindings![KeyCode::KeyR]),
+			(Action::<list_inv::OpenInv>::new(), bindings![KeyCode::KeyI, GamepadButton::North]),
+			(Action::<Grab>::new(), bindings![MouseButton::Right, GamepadButton::West]),
 		]),
 	));
 	
@@ -193,6 +199,40 @@ impl LockMouse {
 	fn on_lock(_input: On<Complete<LockMouse>>, mut cursor: Single<&mut bevy::window::CursorOptions, With<Window>>) {
 		cursor.visible = !cursor.visible;
 		cursor.grab_mode = if cursor.visible { bevy::window::CursorGrabMode::None } else { bevy::window::CursorGrabMode::Locked };
+	}
+}
+
+#[derive(InputAction)]
+#[action_output(bool)]
+pub struct Grab;
+impl Grab {
+	#[instrument(skip_all)]
+	fn on_grab(
+		input: On<Complete<Self>>,
+		mut cmds: Commands,
+		players: Query<&Player>,
+		xforms: Query<&GlobalTransform>,
+		spatial: SpatialQuery,
+	) -> Result {
+		let Player { camera, .. } = players.get(input.context)?;
+		let cam_xform = xforms.get(*camera)?;
+
+		let Some(hit) = spatial.cast_ray(
+			cam_xform.translation(),
+			cam_xform.forward(),
+			2.0,
+			false,
+			&SpatialQueryFilter::from_excluded_entities([input.context]),
+		) else {
+			info!("Tried to grab, but nothing was in reach");
+			return Ok(())
+		};
+		
+		info!("Grabbed entity: {:?}", hit.entity);
+		
+		inv::add_to_inventory(&mut cmds, input.context, hit.entity);
+
+		Ok(())
 	}
 }
 

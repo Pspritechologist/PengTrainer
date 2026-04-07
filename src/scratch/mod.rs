@@ -5,6 +5,9 @@ use bevy::prelude::*;
 use avian3d::prelude::LinearVelocity;
 use crate::movement;
 
+pub mod inventory;
+pub mod list_inv;
+
 pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
 	fn build(&self, app: &mut App) {
@@ -12,6 +15,9 @@ impl bevy::prelude::Plugin for Plugin {
 			.add_systems(FixedUpdate, (throw_balls, FollowEntity::update))
 			.add_systems(PostStartup, setup_env)
 		;
+
+		inventory::init(app);
+		list_inv::init(app);
 	}
 }
 
