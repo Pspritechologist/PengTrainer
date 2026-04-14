@@ -22,7 +22,7 @@ impl Plugin for PlayerInputPlugin {
 	}
 }
 
-pub fn spawn_player(commands: &mut Commands, scattering_medium: Handle<ScatteringMedium>, meshes: &mut Assets<Mesh>) -> Entity {
+pub fn spawn_player<'a>(commands: &'a mut Commands, scattering_medium: Handle<ScatteringMedium>, meshes: &mut Assets<Mesh>) -> EntityCommands<'a> {
 	let camera = commands.spawn((
 		Camera3d::default(),
 		// bevy::camera::Exposure::from_physical_camera(bevy::camera::PhysicalCameraParameters {
@@ -54,12 +54,11 @@ pub fn spawn_player(commands: &mut Commands, scattering_medium: Handle<Scatterin
 		TransformPropagate::full().without_rotation(),
 	)).add_child(camera).id();
 
-	commands.spawn((
+	let mut player_cmds = commands.spawn((
 		Name::new("Parker"),
 		Collider::capsule(0.28, 0.7),
 		Mesh3d(meshes.add(Capsule3d::new(0.28, 0.7))),
 		PrototypeMaterial::new("parker"),
-		Transform::from_xyz(12., 6., 24.),
 		Floater {
 			desired_height: 1.45,
 			spring_strength: 48.0,
@@ -87,7 +86,11 @@ pub fn spawn_player(commands: &mut Commands, scattering_medium: Handle<Scatterin
 			(Action::<LockMouse>::new(), bindings![KeyCode::Escape]),
 			(Action::<Reset>::new(), bindings![KeyCode::KeyR]),
 		]),
-	)).add_one_related::<TransformPropagateTo>(head).id()
+	));
+	
+	player_cmds.add_one_related::<TransformPropagateTo>(head);
+
+	player_cmds
 }
 
 #[derive(Debug, Clone, Copy, Component, Reflect)]
@@ -198,7 +201,7 @@ impl LockMouse {
 pub struct Reset;
 impl Reset {
 	#[instrument(skip_all)]
-	fn on_reset(input: On<Start<Reset>>, mut commands: Commands) {
-		commands.entity(input.context).insert(Transform::from_xyz(16., 2., 26.));
+	fn on_reset(input: On<Start<Reset>>, mut commands: Commands, spawn: Option<Single<&GlobalTransform, With<crate::trenchbroom::PlayerSpawn>>>) {
+		commands.entity(input.context).insert(spawn.map_or(Transform::from_xyz(0., 5., 0.), |g| g.compute_transform()));
 	}
 }

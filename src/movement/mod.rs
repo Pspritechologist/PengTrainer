@@ -38,7 +38,7 @@ pub struct FloatMovement {
 	/// Added to acceleration as catchup when changing directions.\
 	/// > "This baby turns on a dime!"
 	pub dimeyness: f32,
-	goal_velocity: Vec3,
+	pub goal_velocity: Vec3,
 }
 impl Default for FloatMovement {
 	fn default() -> Self {

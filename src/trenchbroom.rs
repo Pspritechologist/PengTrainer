@@ -15,7 +15,6 @@ impl bevy::prelude::Plugin for Plugin {
 				.global_transform_application(false)
 				.default_solid_scene_hooks(|| SceneHooks::new().convex_collider()))
 			))
-		.register_type::<FlickeringLight>()
 		.add_systems(PostUpdate, Ball::handle_spawn)
 		.add_systems(PostUpdate, Cube::handle_spawn)
 		.add_systems(FixedUpdate, FlickeringLight::update)
@@ -23,6 +22,10 @@ impl bevy::prelude::Plugin for Plugin {
 		;
 	}
 }
+
+#[point_class(base(Transform))]
+#[derive(Debug, Default, Component)]
+pub struct PlayerSpawn;
 
 #[point_class(base(PointLight), group("light"))]
 #[derive(Debug, Default, Component)]

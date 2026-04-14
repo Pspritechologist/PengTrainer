@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-use bevy::prelude::*;
+use bevy::{asset::AssetPath, ecs::system::RunSystemOnce, prelude::*};
 use avian3d::prelude::*;
 use debug::PrototypeMaterial;
 
@@ -46,13 +46,36 @@ fn main() {
 	app
 		.add_plugins(utils::UtilsPlugin)
 		.add_plugins(movement::MovementPlugin)
-		.add_plugins(scratch::Plugin)
-		.add_systems(PostStartup, setup);
-
+		.add_plugins(scratch::Plugin);
+	
+	app.add_systems(Startup, setup);
+	
 	app.run();
 }
 
-fn setup(
+fn setup(world: &mut World) -> Result {
+	let mut args = std::env::args_os();
+	if args.any(|a| a == "--load-map") {
+		let Some(map_path) = args.next() else {
+			eprintln!("--load-map flag provided but no path given");
+			return Err("No path provided to --load-map")?;
+		};
+
+		let map_path = AssetPath::from_path_buf(map_path.into()).with_label("Scene");
+
+		let map = SceneRoot(world.resource::<AssetServer>().load(map_path));
+
+		world.spawn((map, Transform::default()));
+
+		world.run_system_once(setup_loaded_map).unwrap();
+	} else {
+		world.run_system_once(setup_dev_env).unwrap();
+	}
+
+	Ok(())
+}
+
+fn setup_dev_env(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut scattering_mediums: ResMut<Assets<bevy::pbr::ScatteringMedium>>,
@@ -62,10 +85,11 @@ fn setup(
 		Name::new("SwampyPeasants"),
 		SceneRoot(asset_server.load("maps/swampypeasants.map#Scene")),
 		Transform::from_xyz(0., 0., 0.,),
-		RigidBody::Static,
 	));
 
-	let player = movement::player::spawn_player(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), &mut meshes);
+	let player = movement::player::spawn_player(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), &mut meshes)
+		.insert(Transform::from_xyz(12., 6., 24.))
+		.id();
 
 	commands.spawn((
 		Name::new("Cuboid"),
@@ -74,24 +98,22 @@ fn setup(
 		PrototypeMaterial::new("cuboid"),
 		Transform::from_xyz(0., 20., 0.),
 		movement::Floater::default(),
-		movement::FloatMovement::default(),
-		// scratch::FollowEntity(player),
+		movement::FloatMovement {
+			acceleration: 8.0,
+			max_speed: 3.2,
+			dimeyness: 4.0,
+			..Default::default()
+		},
+		scratch::FollowEntity(player),
 	));
+}
 
-	// commands.spawn((
-	// 	Camera3d::default(),
-	// 	Camera {
-	// 		// is_active: false,
-	// 		order: 100,
-	// 		..Default::default()
-	// 	},
-	// 	Transform::from_xyz(-7., 4.5, 20.0).looking_at(Vec3::new(16., 4.5, 30.), Vec3::Y),
-	// 	bevy::camera_controller::free_camera::FreeCamera {
-	// 		sensitivity: 0.2,
-	// 		friction: 25.0,
-	// 		walk_speed: 3.0,
-	// 		run_speed: 9.0,
-	// 		..default()
-	// 	},
-	// ));
+fn setup_loaded_map(
+	mut commands: Commands,
+	mut meshes: ResMut<Assets<Mesh>>,
+	mut scattering_mediums: ResMut<Assets<bevy::pbr::ScatteringMedium>>,
+	player_spawn: Option<Single<&GlobalTransform, With<trenchbroom::PlayerSpawn>>>,
+) {
+	movement::player::spawn_player(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), &mut meshes)
+		.insert(player_spawn.map_or(Transform::from_xyz(0., 5., 0.), |g| g.compute_transform()));
 }
