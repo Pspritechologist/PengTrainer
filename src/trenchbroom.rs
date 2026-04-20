@@ -3,6 +3,7 @@ use bevy_trenchbroom::{class::builtin::FuncGeneric, config::MapFileFormat, prelu
 use bevy_trenchbroom_avian::AvianPhysicsBackend;
 use avian3d::prelude::{Collider, LinearVelocity, RigidBody};
 use crate::debug::{self, ColorSource};
+use crate::scratch::inventory as inv;
 
 pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
@@ -140,6 +141,11 @@ fn add_dynamic_colliders(
 )]
 #[derive(Debug, Default, Component)]
 #[reflect(Debug, Default, Component)]
+#[require(inv::item::CanBePickedUp::new(|mut item| {
+	item.insert((
+		inv::item::ItemWeight(500),
+	));
+}))]
 /// A parkin ball
 pub struct Ball {
 	/// Nyooom.

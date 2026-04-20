@@ -1,5 +1,7 @@
 use bevy::{ecs::entity_disabling::Disabled, prelude::*};
 
+pub mod item;
+
 pub fn init(app: &mut App) {
 	app
 		// .register_type::<Inventory>()
@@ -12,11 +14,15 @@ pub fn init(app: &mut App) {
 
 /// Queues up creating an Inventory item marker Entity to represent the given `item` Entity, relating them together as well as the
 /// marker to the Inventory itself, triggering the [`ItemAdded`] event, and finally disabling the item Entity all in order.
-pub fn add_to_inventory(cmds: &mut Commands, inventory: Entity, item: Entity) {
+pub fn add_to_inventory(cmds: &mut Commands, query: Query<&item::CanBePickedUp>, inventory: Entity, item: Entity) {
+	let Ok(can_be) = query.get(item) else { return };
+	
 	let item_marker = cmds.spawn_empty().id();
 
-	cmds.entity(item).add_one_related::<Item>(item_marker);
+	cmds.entity(item).add_one_related::<RepresentsItem>(item_marker);
 	cmds.entity(inventory).add_one_related::<InInventory>(item_marker);
+
+	(can_be.apply_item_bundle)(cmds.entity(item));
 
 	cmds.entity(item).insert(Disabled);
 
@@ -30,7 +36,7 @@ impl EntityCommand for RemoveFromInventoryCmd {
 	fn apply(self, entity: EntityWorldMut) {
 		let item = entity.id();
 
-		let Some(inv_item) = entity.get::<IsItem>().map(|i| i.0) else {
+		let Some(inv_item) = entity.get::<ItemRepresentedBy>().map(|i| i.0) else {
 			warn!("Tried to remove ent {} from inventory- Entity was not in inventory", item);
 			return
 		};
@@ -93,17 +99,17 @@ pub struct Capacity(u32);
 /// some other Entity is stored in this Inventory. The target for this Relationship is the [`IsItem`] Component.
 #[derive(Debug, Clone, Copy, Component, Reflect)]
 #[reflect(Debug, Clone, Component)]
-#[relationship(relationship_target = IsItem)]
-pub struct Item(Entity);
-impl Item {
-	pub fn represented_entity(&self) -> Entity { self.0 }
+#[relationship(relationship_target = ItemRepresentedBy)]
+pub struct RepresentsItem(Entity);
+impl RepresentsItem {
+	pub fn entity(&self) -> Entity { self.0 }
 }
 
 /// Relation target for the [`Item`] Relationship, representing that this Entity has a marker 'Item' Entity stored in an Inventory.
 #[derive(Debug, Clone, Copy, Component, Reflect)]
 #[reflect(Debug, Clone, Component)]
-#[relationship_target(relationship = Item)]
-pub struct IsItem(Entity);
-impl IsItem {
+#[relationship_target(relationship = RepresentsItem)]
+pub struct ItemRepresentedBy(Entity);
+impl ItemRepresentedBy {
 	pub fn inventory_marker_entity(&self) -> Entity { self.0 }
 }

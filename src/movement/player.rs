@@ -212,6 +212,7 @@ impl Grab {
 		mut cmds: Commands,
 		players: Query<&Player>,
 		xforms: Query<&GlobalTransform>,
+		grabbable_query: Query<&inv::item::CanBePickedUp>,
 		spatial: SpatialQuery,
 	) -> Result {
 		let Player { camera, .. } = players.get(input.context)?;
@@ -230,7 +231,7 @@ impl Grab {
 		
 		info!("Grabbed entity: {:?}", hit.entity);
 		
-		inv::add_to_inventory(&mut cmds, input.context, hit.entity);
+		inv::add_to_inventory(&mut cmds, grabbable_query, input.context, hit.entity);
 
 		Ok(())
 	}

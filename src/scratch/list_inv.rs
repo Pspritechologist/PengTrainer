@@ -50,7 +50,7 @@ impl HasListInvOpen {
 fn display_list_invs(
 	mut cmds: Commands,
 	inventories: Query<(NameOrEntity, &mut ListInv, &inv::Inventory), With<HasListInvOpen>>,
-	items: Query<(NameOrEntity, &inv::Item)>,
+	items: Query<(NameOrEntity, &inv::RepresentsItem)>,
 	mut ctxs: EguiContexts,
 ) -> Result {
 	let ctx = ctxs.ctx_mut()?;
@@ -64,7 +64,7 @@ fn display_list_invs(
 					ui.label(ent.to_string());
 					if ui.small_button("Eject").clicked() {
 						info!("Ejected {ent}");
-						cmds.entity(item.represented_entity()).queue(inv::RemoveFromInventoryCmd);
+						cmds.entity(item.entity()).queue(inv::RemoveFromInventoryCmd);
 					}
 				});
 			}
