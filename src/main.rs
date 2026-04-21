@@ -81,12 +81,6 @@ fn setup_dev_env(
 	mut scattering_mediums: ResMut<Assets<bevy::pbr::ScatteringMedium>>,
 	asset_server: Res<AssetServer>,
 ) {
-	commands.spawn((
-		Name::new("SwampyPeasants"),
-		SceneRoot(asset_server.load("maps/swampypeasants.map#Scene")),
-		Transform::from_xyz(0., 0., 0.,),
-	));
-
 	let player = movement::player::spawn_player(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), &mut meshes)
 		.insert(Transform::from_xyz(12., 6., 24.))
 		.id();
@@ -104,8 +98,14 @@ fn setup_dev_env(
 			dimeyness: 4.0,
 			..Default::default()
 		},
-		scratch::FollowEntity(player),
+		// scratch::FollowEntity(player),
 	));
+
+	commands.spawn((
+		Name::new("SwampyPeasants"),
+		SceneRoot(asset_server.load("maps/swampypeasants.map#Scene")),
+		Transform::from_xyz(0., 0., 0.,),
+	)).add_child(player);
 }
 
 fn setup_loaded_map(

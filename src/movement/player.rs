@@ -30,6 +30,7 @@ impl Plugin for PlayerInputPlugin {
 pub struct PlayerUtils {
 	entity: Entity,
 	player: &'static Player,
+	xform: &'static Transform,
 }
 
 impl PlayerUtilsItem<'_, '_> {
@@ -45,7 +46,7 @@ impl PlayerUtilsItem<'_, '_> {
 			return cam_pos + cam_dir * distance;
 		};
 		
-		return hit.normal;
+		return self.xform.translation + cam_dir * hit.distance;
 	}
 }
 
