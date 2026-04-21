@@ -1,9 +1,10 @@
+use avian3d::prelude::SpatialQuery;
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 use bevy_enhanced_input::prelude::*;
 use tracing::instrument;
 
-use crate::scratch::inventory as inv;
+use crate::{movement::player::PlayerUtils, scratch::inventory as inv};
 
 pub fn init(app: &mut App) {
 	app
@@ -49,14 +50,17 @@ impl HasListInvOpen {
 
 fn display_list_invs(
 	mut cmds: Commands,
-	inventories: Query<(NameOrEntity, &mut ListInv, &inv::Inventory), With<HasListInvOpen>>,
+	has_invs_open: Query<(PlayerUtils, &HasListInvOpen)>,
+	mut inventories: Query<(NameOrEntity, &mut ListInv, &inv::Inventory)>,
 	items: Query<(NameOrEntity, &inv::RepresentsItem)>,
+	xforms: Query<&GlobalTransform>, 
+	mut spatial: SpatialQuery,
 	mut ctxs: EguiContexts,
 ) -> Result {
 	let ctx = ctxs.ctx_mut()?;
 
-	for (inventory, list_inv, inv_comp) in inventories {
-		// let ctx = ctxs.ctx_for_entity_mut(inventory)?;
+	for (player, has_open) in has_invs_open {
+		let Ok((inventory, list_inv, inv_comp)) = inventories.get_mut(has_open.inventory) else { continue }; 
 
 		egui::Window::new("invy").id(egui::Id::new(inventory.entity)).vscroll(true).show(ctx, |ui| {
 			for (ent, item) in items.iter_many(inv_comp.collection()) {
@@ -64,7 +68,9 @@ fn display_list_invs(
 					ui.label(ent.to_string());
 					if ui.small_button("Eject").clicked() {
 						info!("Ejected {ent}");
-						cmds.entity(item.entity()).queue(inv::RemoveFromInventoryCmd);
+						cmds.entity(item.entity()).queue(inv::RemoveFromInventoryCmd {
+							new_location: Transform::from_translation(player.looking_at(xforms, &mut spatial, 3.0))
+						});
 					}
 				});
 			}

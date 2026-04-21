@@ -22,7 +22,7 @@ pub fn add_to_inventory(cmds: &mut Commands, query: Query<&item::CanBePickedUp>,
 	cmds.entity(item).add_one_related::<RepresentsItem>(item_marker);
 	cmds.entity(inventory).add_one_related::<InInventory>(item_marker);
 
-	(can_be.apply_item_bundle)(cmds.entity(item));
+	(can_be.apply_item_bundle)(cmds.entity(item_marker));
 
 	cmds.entity(item).insert(Disabled);
 
@@ -31,21 +31,27 @@ pub fn add_to_inventory(cmds: &mut Commands, query: Query<&item::CanBePickedUp>,
 
 //TODO: Should this take the actual Entity, the marker Entity, or either?
 /// Entity Command to 
-pub struct RemoveFromInventoryCmd;
+#[derive(Default)]
+#[non_exhaustive]
+pub struct RemoveFromInventoryCmd {
+	pub new_location: Transform,
+}
 impl EntityCommand for RemoveFromInventoryCmd {
-	fn apply(self, entity: EntityWorldMut) {
+	fn apply(self, mut entity: EntityWorldMut) {
 		let item = entity.id();
 
-		let Some(inv_item) = entity.get::<ItemRepresentedBy>().map(|i| i.0) else {
+		let Some(item_marker) = entity.get::<ItemRepresentedBy>().map(|i| i.0) else {
 			warn!("Tried to remove ent {} from inventory- Entity was not in inventory", item);
 			return
 		};
 
+		entity.insert(self.new_location);
+
 		let world = entity.into_world_mut();
 
-		let inventory = world.entity(inv_item).get::<InInventory>().unwrap().0;
+		let inventory = world.entity(item_marker).get::<InInventory>().unwrap().0;
 
-		world.despawn(inv_item);
+		world.despawn(item_marker);
 	
 		world.trigger(ItemRemoved { inventory, item });
 

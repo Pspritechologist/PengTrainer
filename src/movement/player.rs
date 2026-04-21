@@ -1,3 +1,5 @@
+use bevy::ecs::query::QueryData;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::pbr::{Atmosphere, ScatteringMedium};
 use bevy_enhanced_input::prelude::*;
@@ -21,6 +23,29 @@ impl Plugin for PlayerInputPlugin {
 			.add_observer(Grab::on_grab)
 			.add_systems(Update, FpsPlayerInput::handle_look)
 		;
+	}
+}
+
+#[derive(QueryData)]
+pub struct PlayerUtils {
+	entity: Entity,
+	player: &'static Player,
+}
+
+impl PlayerUtilsItem<'_, '_> {
+	pub fn looking_at(&self, xforms: Query<&GlobalTransform>, spatial: &mut SpatialQuery, distance: f32) -> Vec3 {
+
+		let cam_xform = xforms.get(self.player.camera).unwrap();
+		let cam_pos = cam_xform.translation();
+		let cam_dir = cam_xform.forward();
+		
+		let filter = SpatialQueryFilter::from_excluded_entities([self.entity]); 
+
+		let Some(hit) = spatial.cast_ray(cam_pos, cam_dir, distance, false, &filter) else {
+			return cam_pos + cam_dir * distance;
+		};
+		
+		return hit.normal;
 	}
 }
 
