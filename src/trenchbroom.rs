@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use bevy_trenchbroom::{class::builtin::FuncGeneric, config::MapFileFormat, prelude::*};
-use bevy_trenchbroom_avian::AvianPhysicsBackend;
+use bevy_trenchbroom::{class::builtin::FuncGeneric, config::MapFileFormat, physics::{PhysicsBackend, TrenchBroomPhysicsPlugin}, prelude::*};
 use avian3d::prelude::{Collider, LinearVelocity, RigidBody};
 use crate::debug::{self, ColorSource};
 
@@ -206,5 +205,22 @@ impl Cube {
 				Mesh3d(mesh.clone()),
 			));
 		}
+	}
+}
+
+pub struct AvianPhysicsBackend;
+impl PhysicsBackend for AvianPhysicsBackend {
+	type Vector = Vec3;
+	const ZERO: Self::Vector = Vec3::ZERO;
+	fn vec3(v: Vec3) -> Self::Vector { v }
+	fn dvec3(v: bevy::math::DVec3) -> Self::Vector { v.as_vec3() }
+
+	type Collider = Collider;
+	fn cuboid_collider(Vec3 { x, y, z }: Self::Vector) -> Self::Collider { Collider::cuboid(x, y, z) }
+	fn convex_collider(points: Vec<Self::Vector>) -> Option<Self::Collider> { Collider::convex_hull(points) }
+	fn trimesh_collider(mesh: &Mesh) -> Option<Self::Collider> { Collider::trimesh_from_mesh(mesh) }
+	fn compound_collider(colliders: Vec<(Self::Vector, Quat, Self::Collider)>) -> Self::Collider { Collider::compound(colliders) }
+	fn insert_static_collider(mut entity: EntityCommands, collider: Self::Collider) {
+		entity.insert(collider).insert_if_new(RigidBody::Static);
 	}
 }
