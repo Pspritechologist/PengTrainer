@@ -1,26 +1,52 @@
 use bevy::prelude::*;
-use bevy_trenchbroom::{class::builtin::FuncGeneric, config::MapFileFormat, physics::{PhysicsBackend, TrenchBroomPhysicsPlugin}, prelude::*};
+use bevy_trenchbroom::{config::MapFileFormat, physics::{PhysicsBackend, TrenchBroomPhysicsPlugin}, prelude::*};
 use avian3d::prelude::{Collider, LinearVelocity, RigidBody};
-use crate::debug::{self, ColorSource};
+use crate::{debug::{self, ColorSource}, utils::WithAppended};
 
 pub struct Plugin;
 impl bevy::prelude::Plugin for Plugin {
 	fn build(&self, app: &mut App) {
+		let tb_plugin_cfg = TrenchBroomConfig::new("PengTrainerBevy")
+			.file_formats([MapFileFormat::Quake2Valve])
+			.icon(Some(include_bytes!("../icon/32x.png").into()))
+			.global_transform_application(false)
+			.default_solid_scene_hooks(|| SceneHooks::new().convex_collider())
+			.texture_exclusions(TrenchBroomConfig::default_texture_exclusions().with_appended("prototype"));
+
+		#[cfg(not(debug_assertions))]
+		let tb_plugin_cfg = tb_plugin_cfg.asset_manifest(manifest!("assets"));
+
 		app.add_plugins((
+			TrenchBroomPlugins(tb_plugin_cfg),
 			TrenchBroomPhysicsPlugin::new(AvianPhysicsBackend),
-			TrenchBroomPlugins(TrenchBroomConfig::new("PengTrainerBevy")
-				.file_formats([MapFileFormat::Quake2Valve])
-				.icon(Some(include_bytes!("../icon/32x.png").into()))
-				.global_transform_application(false)
-				.default_solid_scene_hooks(|| SceneHooks::new().convex_collider()))
-			))
+		))
 		.add_systems(PostUpdate, Ball::handle_spawn)
 		.add_systems(PostUpdate, Cube::handle_spawn)
 		.add_systems(FixedUpdate, FlickeringLight::update)
 		.add_systems(PostUpdate, add_dynamic_colliders)
+
+		.override_class::<WorldSpawn>()
+		.override_class::<FuncGroup>()
+		.override_class::<FuncGeneric>()
 		;
 	}
 }
+
+/// The worldspawn entity contains the main structural geometry in the world, and its properties represent map-wide settings. Exactly one must be in every map.
+#[solid_class(classname("worldspawn"), base(/* PrototypeMaterialTb */))]
+#[derive(Debug, Clone, Copy)]
+struct WorldSpawn;
+
+/// Groups a set of brushes together in-editor.
+#[solid_class(base(/* PrototypeMaterialTb */))]
+#[derive(Debug, Clone, Copy)]
+#[reflect(no_auto_register)]
+pub struct FuncGroup;
+
+/// Generic brush entity to separate from world geometry. bevy_trenchbroom's version of Quake's `func_wall`.
+#[solid_class(base(/* PrototypeMaterialTb */))]
+#[derive(Debug, Clone, Copy)]
+struct FuncGeneric;
 
 #[point_class(base(Transform))]
 #[derive(Debug, Default, Component)]
@@ -216,7 +242,7 @@ impl PhysicsBackend for AvianPhysicsBackend {
 	fn dvec3(v: bevy::math::DVec3) -> Self::Vector { v.as_vec3() }
 
 	type Collider = Collider;
-	fn cuboid_collider(Vec3 { x, y, z }: Self::Vector) -> Self::Collider { Collider::cuboid(x, y, z) }
+	fn cuboid_collider(Vec3 { x, y, z }: Self::Vector) -> Self::Collider { avian3d::parry::shape::SharedShape::cuboid(x, y, z).into() }
 	fn convex_collider(points: Vec<Self::Vector>) -> Option<Self::Collider> { Collider::convex_hull(points) }
 	fn trimesh_collider(mesh: &Mesh) -> Option<Self::Collider> { Collider::trimesh_from_mesh(mesh) }
 	fn compound_collider(colliders: Vec<(Self::Vector, Quat, Self::Collider)>) -> Self::Collider { Collider::compound(colliders) }
