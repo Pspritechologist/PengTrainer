@@ -30,22 +30,22 @@ fn main() {
 		})
 		.add_plugins(PhysicsPlugins::default())
 		.add_plugins(bevy_enhanced_input::EnhancedInputPlugin)
-		.add_plugins(trenchbroom::Plugin)
+		.add_plugins(trenchbroom::plugin)
 		.add_plugins((bevy::camera_controller::free_camera::FreeCameraPlugin, bevy_rts_camera::RtsCameraPlugin))
-		.add_plugins(debug::PrototypeMaterialPlugin)
-		.add_plugins(debug::InspectorPlugin);
+		.add_plugins(debug::prototype_material_plugin)
+		.add_plugins(debug::inspector_plugin);
 
 	if std::env::args_os().any(|a| a == "--phys-debug") {
 		app.add_plugins(PhysicsDebugPlugin);
 	}
 
 	if std::env::args_os().any(|a| a == "--fps") {
-		app.add_plugins(debug::FpsOverlay);
+		app.add_plugins(debug::fps_overlay_plugin);
 	}
 
 	app
-		.add_plugins(utils::UtilsPlugin)
-		.add_plugins(movement::MovementPlugin)
+		.add_plugins(utils::plugin)
+		.add_plugins(movement::plugin)
 		.add_plugins(scratch::Plugin);
 	
 	app.add_systems(Startup, setup);

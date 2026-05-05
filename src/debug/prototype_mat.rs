@@ -72,13 +72,9 @@ static INITIALIZED: std::sync::Once = std::sync::Once::new();
 /// Plugin for [`crate::prototype_material`] feature. Attachts resources and initialization system.
 /// # Remarks
 /// This plugin is necessary to use [`crate::prototype_material`] feature. It is added to [`App`] by [`crate::DevPlugins`].
-pub struct PrototypeMaterialPlugin;
-
-impl Plugin for PrototypeMaterialPlugin {
-	fn build(&self, app: &mut App) {
-		app.add_plugins(MaterialPlugin::<PrototypeMaterialAsset>::default())
-			.add_systems(PostUpdate, initialization);
-	}
+pub fn prototype_material_plugin(app: &mut App) {
+	app.add_plugins(MaterialPlugin::<PrototypeMaterialAsset>::default())
+		.add_systems(PostUpdate, initialization);
 }
 
 /// Component which includes [`PrototypeMaterialAsset`] to [`Entity`] in the next [`PostUpdate`].

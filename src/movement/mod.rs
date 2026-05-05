@@ -1,21 +1,16 @@
-use std::ops::Neg;
-
 use bevy::prelude::*;
 use avian3d::prelude::{forces::ForcesItem, *};
 use tracing::instrument;
 
 pub mod player;
 
-pub struct MovementPlugin;
-impl Plugin for MovementPlugin {
-	fn build(&self, app: &mut App) {
-		app.add_plugins(player::PlayerInputPlugin)
-			.add_systems(FixedUpdate, (
-				Floater::update_velocity,
-				Floater::update_torque_upright,
-				Floater::update_torque_target,
-			));
-	}
+pub fn plugin(app: &mut App) {
+	app.add_plugins(player::PlayerInputPlugin)
+		.add_systems(FixedUpdate, (
+			Floater::update_velocity,
+			Floater::update_torque_upright,
+			Floater::update_torque_target,
+		));
 }
 
 #[derive(Debug, Clone, Copy, Default, Component, Reflect)]

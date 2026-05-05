@@ -1,14 +1,11 @@
 use bevy::prelude::*;
 
-pub struct InspectorPlugin;
-impl Plugin for InspectorPlugin {
-	fn build(&self, app: &mut App) {
-		app
-			.init_resource::<InspectorToggle>()
-			.add_systems(PostUpdate, toggle_inspector)
-			.add_plugins(bevy_inspector_egui::bevy_egui::EguiPlugin::default())
-			.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new().run_if(|toggle: Res<InspectorToggle>| toggle.0));
-	}
+pub fn inspector_plugin(app: &mut App) {
+	app
+		.init_resource::<InspectorToggle>()
+		.add_systems(PostUpdate, toggle_inspector)
+		.add_plugins(bevy_inspector_egui::bevy_egui::EguiPlugin::default())
+		.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new().run_if(|toggle: Res<InspectorToggle>| toggle.0));
 }
 
 #[derive(Clone, Copy, Default, Resource)]
