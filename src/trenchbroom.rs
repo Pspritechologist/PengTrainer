@@ -1,6 +1,7 @@
 use bevy::prelude::*;
-use bevy_trenchbroom::{config::MapFileFormat, physics::{PhysicsBackend, TrenchBroomPhysicsPlugin}, prelude::*};
-use avian3d::prelude::{Collider, LinearVelocity, RigidBody};
+use bevy_trenchbroom::prelude::*;
+use bevy_trenchbroom::{config::MapFileFormat, physics::{PhysicsBackend, TrenchBroomPhysicsPlugin}};
+use avian3d::prelude::{Collider, LinearVelocity, RigidBody, ColliderConstructor};
 use crate::{debug::{self, ColorSource}, utils::WithAppended};
 
 pub fn plugin(app: &mut App) {
@@ -21,7 +22,6 @@ pub fn plugin(app: &mut App) {
 	.add_systems(PostUpdate, Ball::handle_spawn)
 	.add_systems(PostUpdate, Cube::handle_spawn)
 	.add_systems(FixedUpdate, FlickeringLight::update)
-	.add_systems(PostUpdate, add_dynamic_colliders)
 
 	.override_class::<WorldSpawn>()
 	.override_class::<FuncGroup>()
@@ -130,29 +130,7 @@ struct PrototypeBrush;
 #[reflect(Debug, Default, Component)]
 struct RigidBrush;
 fn rigid_hooks() -> SceneHooks {
-	SceneHooks::new().meshes_with(DynamicCollider)
-}
-
-#[derive(Debug, Clone, Default, Component, Reflect)]
-#[reflect(Debug, Clone, Default, Component)]
-struct DynamicCollider;
-fn add_dynamic_colliders(
-	mut commands: Commands,
-	query: Query<(Entity, &Mesh3d), (With<DynamicCollider>, Without<Collider>)>,
-	meshes: Res<Assets<Mesh>>,
-) {
-	for (entity, mesh3d) in &query {
-		let Some(mesh) = meshes.get(mesh3d.id()) else {
-			continue;
-		};
-
-		let Some(collider) = Collider::trimesh_from_mesh(mesh) else {
-			error!("Entity {entity} has TrimeshCollision, but index buffer or vertex buffer of the mesh are in an incompatible format.");
-			continue;
-		};
-
-		commands.entity(entity).insert((collider, RigidBody::Dynamic));
-	}
+	SceneHooks::new().meshes_with((RigidBody::Dynamic, ColliderConstructor::TrimeshFromMesh))
 }
 
 #[point_class(
