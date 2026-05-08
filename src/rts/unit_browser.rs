@@ -4,53 +4,37 @@ use avian3d::prelude::*;
 use tracing::instrument;
 use bevy_egui::egui;
 
+use super::units::{UnitData, UnitList};
+
 use crate::debug::PrototypeMaterial;
 
 pub fn plugin(app: &mut App) {
-	let floater = UnitData {
-		name: "Floater".to_string(),
-		icon: None,
-		spawner: |world| {
-			let mesh = world.resource_mut::<Assets<Mesh>>().add(Cuboid::from_length(1.0));
-			world.spawn((
-				Name::new("Cuboid"),
-				Collider::cuboid(1.0, 1.0, 1.0),
-				Mesh3d(mesh),
-				PrototypeMaterial::new("cuboid"),
-				Transform::from_xyz(0., 20., 0.),
-				crate::movement::Floater::default(),
-				crate::movement::FloatMovement {
-					acceleration: 8.0,
-					max_speed: 3.2,
-					dimeyness: 4.0,
-					..Default::default()
-				},
-			));
-		},
-	};
+	let floater = UnitData::new("Floater", |world| {
+		let mesh = world.resource_mut::<Assets<Mesh>>().add(Cuboid::from_length(1.0));
+		world.spawn((
+			Name::new("Cuboid"),
+			Collider::cuboid(1.0, 1.0, 1.0),
+			Mesh3d(mesh),
+			PrototypeMaterial::new("cuboid"),
+			Transform::from_xyz(0., 20., 0.),
+			crate::movement::Floater::default(),
+			crate::movement::FloatMovement {
+				acceleration: 8.0,
+				max_speed: 3.2,
+				dimeyness: 4.0,
+				..Default::default()
+			},
+		));
+	});
+
+	let mut unit_list = UnitList::default();
+	unit_list.extend(std::iter::repeat_n(floater, 87));
 
 	app
-		.insert_resource(UnitList(vec![floater.clone(), floater.clone(), floater.clone(), floater.clone(), floater.clone(), floater.clone(), floater.clone(), floater.clone(), floater]))
+		.insert_resource(unit_list)
 		.insert_resource(UnitBrowserState(true))
 		.add_systems(bevy_egui::EguiPrimaryContextPass, render_unit_browser)
 	;
-}
-
-#[derive(Debug, Clone, Default, Resource)]
-struct UnitList(Vec<UnitData>);
-
-#[derive(Debug, Clone, Reflect)]
-#[reflect(from_reflect = false)]
-struct UnitData {
-	name: String,
-	icon: Option<u8>,
-	#[reflect(ignore)]
-	spawner: fn(&mut World),
-}
-impl Default for UnitData {
-	fn default() -> Self {
-		Self { icon: default(), name: default(), spawner: |_| () }
-	}
 }
 
 #[derive(Debug, Clone, Copy, Resource, Reflect)]
@@ -75,14 +59,10 @@ fn render_unit_browser(
 		egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
 			ui.vertical_centered_justified(|ui| {
 				ui.horizontal_wrapped(|ui| {
-					for unit in &units.0 {
+					for unit in units.units() {
 						ui.horizontal(|ui| {
-							if let Some(icon) = unit.icon {
-								ui.label(format!("Icon {icon}"));
-							}
-							if ui.button(&unit.name).clicked() {
-								let spawner = unit.spawner;
-								cmds.queue(move |world: &mut World| spawner(world));
+							if ui.button(unit.name()).clicked() {
+								cmds.queue(unit.spawner());
 							}
 						});
 					}

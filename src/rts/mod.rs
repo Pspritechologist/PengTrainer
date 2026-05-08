@@ -1,14 +1,21 @@
 use bevy::{math::bounding::Aabb2d, pbr::{Atmosphere, ScatteringMedium}, prelude::*};
 use bevy_enhanced_input::prelude::*;
 
+use units::UnitList;
+
+mod cursor;
 mod units;
 mod unit_browser;
 
 pub fn plugin(app: &mut App) {
 	app
-		.add_plugins(bevy_rts_camera::RtsCameraPlugin)
-		.add_plugins(units::plugin)
-		.add_plugins(unit_browser::plugin)
+	.add_plugins(bevy_rts_camera::RtsCameraPlugin)
+	.add_plugins(cursor::plugin)
+	.add_plugins(units::plugin)
+	.add_plugins(unit_browser::plugin)
+
+	.add_systems(FixedUpdate, rts_update)
+	.add_observer(select_unit)
 	;
 }
 
@@ -50,4 +57,25 @@ pub fn spawn_rts<'a>(cmds: &'a mut Commands, scattering_medium: Handle<Scatterin
 		bevy::anti_alias::fxaa::Fxaa::default(),
 		bevy::pbr::ScreenSpaceReflections::default(),
 	))
+}
+
+#[derive(Debug, Clone, Copy, Event, Reflect)]
+pub struct SelectUnit(Option<usize>);
+
+#[derive(Debug, Clone, Resource, Reflect)]
+struct RtsState {
+	selected_unit: Option<usize>,
+	rts_cursor: Entity,
+}
+
+fn rts_update(mut cmds: Commands, mut state: If<ResMut<RtsState>>, units: Res<UnitList>) {
+	let state = &mut **state;
+
+	if let Some(idx) = state.selected_unit {
+
+	}
+}
+
+fn select_unit(ev: On<SelectUnit>, mut state: If<ResMut<RtsState>>) {
+	state.selected_unit = ev.0;
 }
