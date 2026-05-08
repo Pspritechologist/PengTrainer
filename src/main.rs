@@ -115,5 +115,5 @@ fn setup_loaded_map(
 	player_spawn: Option<Single<&GlobalTransform, With<trenchbroom::PlayerSpawn>>>,
 ) {
 	movement::player::spawn_player(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), &mut meshes)
-		.insert(player_spawn.map_or(Transform::from_xyz(0., 5., 0.), |g| g.compute_transform()));
+		.insert(player_spawn.map_or(Transform::from_xyz(0., 25., 0.), |g| g.compute_transform()));
 }
