@@ -1,12 +1,13 @@
 #![allow(clippy::type_complexity)]
 
-use bevy::{asset::AssetPath, ecs::system::RunSystemOnce, prelude::*};
+use bevy::{asset::AssetPath, ecs::system::RunSystemOnce, math::bounding::Aabb2d, prelude::*};
 use avian3d::prelude::*;
 use debug::PrototypeMaterial;
 
 mod debug;
 mod trenchbroom;
 mod movement;
+mod rts;
 mod utils;
 
 mod scratch;
@@ -31,7 +32,6 @@ fn main() {
 		.add_plugins(PhysicsPlugins::default())
 		.add_plugins(bevy_enhanced_input::EnhancedInputPlugin)
 		.add_plugins(trenchbroom::plugin)
-		.add_plugins((bevy::camera_controller::free_camera::FreeCameraPlugin, bevy_rts_camera::RtsCameraPlugin))
 		.add_plugins(debug::prototype_material_plugin)
 		.add_plugins(debug::inspector_plugin);
 
@@ -46,7 +46,8 @@ fn main() {
 	app
 		.add_plugins(utils::plugin)
 		.add_plugins(movement::plugin)
-		.add_plugins(scratch::Plugin);
+		.add_plugins(scratch::Plugin)
+		.add_plugins(rts::plugin);
 	
 	app.add_systems(Startup, setup);
 	
@@ -87,9 +88,11 @@ fn setup_dev_env(
 		Transform::from_xyz(0., 0., 0.,),
 	));
 
-	let player = movement::player::spawn_player(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), &mut meshes)
-		.insert(Transform::from_xyz(12., 6., 24.))
-		.id();
+	// let player = movement::player::spawn_player(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), &mut meshes)
+	// 	.insert(Transform::from_xyz(12., 6., 24.))
+	// 	.id();
+
+	rts::spawn_rts(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), Aabb2d::new(Vec2::splat(16.), Vec2::splat(150.)));
 
 	commands.spawn((
 		Name::new("Cuboid"),
@@ -104,7 +107,7 @@ fn setup_dev_env(
 			dimeyness: 4.0,
 			..Default::default()
 		},
-		scratch::FollowEntity(player),
+		// scratch::FollowEntity(player),
 	));
 }
 
