@@ -79,7 +79,6 @@ fn setup(world: &mut World) -> Result {
 fn setup_dev_env(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
-	mut scattering_mediums: ResMut<Assets<bevy::pbr::ScatteringMedium>>,
 	asset_server: Res<AssetServer>,
 ) {
 	commands.spawn((
@@ -92,7 +91,7 @@ fn setup_dev_env(
 	// 	.insert(Transform::from_xyz(12., 6., 24.))
 	// 	.id();
 
-	rts::spawn_rts(&mut commands, scattering_mediums.add(bevy::pbr::ScatteringMedium::default()), Aabb2d::new(Vec2::splat(16.), Vec2::splat(150.)));
+	rts::spawn_rts(&mut commands, &asset_server, Aabb2d::new(Vec2::splat(16.), Vec2::splat(150.)));
 
 	commands.spawn((
 		Name::new("Cuboid"),

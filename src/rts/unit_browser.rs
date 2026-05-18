@@ -9,14 +9,22 @@ use super::units::{UnitData, UnitList};
 use crate::debug::PrototypeMaterial;
 
 pub fn plugin(app: &mut App) {
-	let floater = UnitData::new("Floater", |world| {
-		let mesh = world.resource_mut::<Assets<Mesh>>().add(Cuboid::from_length(1.0));
-		world.spawn((
+	#[derive(Resource)]
+	struct FloaterMesh(Handle<Mesh>);
+
+	let floater = UnitData::new("Floater", |ent| {
+		let mesh = ent.get_resource::<FloaterMesh>().map(|m| m.0.clone()).unwrap_or_else(|| {
+			let mesh = ent.resource_mut::<Assets<Mesh>>().add(Cuboid::from_length(1.0));
+			ent.world_scope(|w| w.insert_resource(FloaterMesh(mesh.clone())));
+			mesh
+		});
+		
+		ent.insert((
 			Name::new("Cuboid"),
 			Collider::cuboid(1.0, 1.0, 1.0),
 			Mesh3d(mesh),
 			PrototypeMaterial::new("cuboid"),
-			Transform::from_xyz(0., 20., 0.),
+			// Transform::from_xyz(0., 20., 0.),
 			crate::movement::Floater::default(),
 			crate::movement::FloatMovement {
 				acceleration: 8.0,
@@ -25,6 +33,8 @@ pub fn plugin(app: &mut App) {
 				..Default::default()
 			},
 		));
+
+		Ok(())
 	});
 
 	let mut unit_list = UnitList::default();
@@ -59,10 +69,10 @@ fn render_unit_browser(
 		egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
 			ui.vertical_centered_justified(|ui| {
 				ui.horizontal_wrapped(|ui| {
-					for unit in units.units() {
+					for (id, unit) in units.units() {
 						ui.horizontal(|ui| {
 							if ui.button(unit.name()).clicked() {
-								cmds.queue(unit.spawner());
+								cmds.trigger(super::SelectUnit(Some(id)));
 							}
 						});
 					}

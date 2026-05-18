@@ -19,8 +19,13 @@ pub fn plugin(app: &mut App) {
 	;
 }
 
-pub fn spawn_rts<'a>(cmds: &'a mut Commands, scattering_medium: Handle<ScatteringMedium>, map_bounds: Aabb2d) -> EntityCommands<'a> {
-	cmds.spawn((
+slotmap::new_key_type! {
+	pub struct UnitId;
+}
+
+#[tracing::instrument(skip(cmds, assets))]
+pub fn spawn_rts<'a>(cmds: &'a mut Commands, assets: &AssetServer, map_bounds: Aabb2d) -> EntityCommands<'a> {
+	let rts_camera = cmds.spawn((
 		Name::new("RtsPlayer"),
 		Camera3d::default(),
 		bevy_rts_camera::RtsCamera {
@@ -45,7 +50,7 @@ pub fn spawn_rts<'a>(cmds: &'a mut Commands, scattering_medium: Handle<Scatterin
 			fov: 45.0f32.to_radians(),
 			..Default::default()
 		}),
-		Atmosphere::earthlike(scattering_medium),
+		Atmosphere::earthlike(assets.add(default())),
 		bevy::camera::Exposure { ev100: 13.0 },
 		bevy::post_process::bloom::Bloom::NATURAL,
 		bevy::light::AtmosphereEnvironmentMapLight::default(),
@@ -56,15 +61,35 @@ pub fn spawn_rts<'a>(cmds: &'a mut Commands, scattering_medium: Handle<Scatterin
 		Msaa::Off,
 		bevy::anti_alias::fxaa::Fxaa::default(),
 		bevy::pbr::ScreenSpaceReflections::default(),
-	))
+	)).id();
+
+	let rts_cursor = cursor::Cursor::spawn(cmds, assets).id();
+
+	cmds.queue(move |world: &mut World| {
+		if let Some(state) = world.get_resource::<RtsState>() {
+			error!("Spawning a new RTS player while RtsState was already populated.");
+			let RtsState { rts_camera, rts_cursor, ..} = *state;
+			_ = world.try_despawn(rts_camera);
+			_ = world.try_despawn(rts_cursor);
+		}
+		
+		world.insert_resource(RtsState {
+			rts_camera,
+			rts_cursor,
+			selected_unit: None,
+		});
+	});
+
+	cmds.entity(rts_camera)
 }
 
-#[derive(Debug, Clone, Copy, Event, Reflect)]
-pub struct SelectUnit(Option<usize>);
+#[derive(Debug, Clone, Copy, Event)]
+pub struct SelectUnit(Option<UnitId>);
 
-#[derive(Debug, Clone, Resource, Reflect)]
+#[derive(Debug, Clone, Resource)]
 struct RtsState {
-	selected_unit: Option<usize>,
+	selected_unit: Option<UnitId>,
+	rts_camera: Entity,
 	rts_cursor: Entity,
 }
 
@@ -76,6 +101,7 @@ fn rts_update(mut cmds: Commands, mut state: If<ResMut<RtsState>>, units: Res<Un
 	}
 }
 
+#[tracing::instrument(skip_all)]
 fn select_unit(ev: On<SelectUnit>, mut state: If<ResMut<RtsState>>) {
 	state.selected_unit = ev.0;
 }
