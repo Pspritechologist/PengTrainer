@@ -14,18 +14,16 @@ pub fn plugin(app: &mut App) {
 	#[cfg(not(debug_assertions))]
 	let tb_plugin_cfg = tb_plugin_cfg.asset_manifest(manifest!("assets"));
 
-	app.add_plugins((
-		TrenchBroomPlugins(tb_plugin_cfg),
-		TrenchBroomPhysicsPlugin::new(AvianPhysicsBackend),
-	))
-	.add_systems(PostUpdate, Ball::handle_spawn)
-	.add_systems(PostUpdate, Cube::handle_spawn)
-	.add_systems(FixedUpdate, FlickeringLight::update)
-	.add_systems(PostUpdate, add_dynamic_colliders)
+	app.add_plugins(TrenchBroomPlugins(tb_plugin_cfg))
+		.add_plugins(TrenchBroomPhysicsPlugin::new(AvianPhysicsBackend))
+		.add_systems(PostUpdate, Ball::handle_spawn)
+		.add_systems(PostUpdate, Cube::handle_spawn)
+		.add_systems(FixedUpdate, FlickeringLight::update)
+		.add_systems(PostUpdate, add_dynamic_colliders)
 
-	.override_class::<WorldSpawn>()
-	.override_class::<FuncGroup>()
-	.override_class::<FuncGeneric>()
+		.override_class::<WorldSpawn>()
+		.override_class::<FuncGroup>()
+		.override_class::<FuncGeneric>()
 	;
 }
 
@@ -125,12 +123,14 @@ impl PrototypeMaterial {
 /// the name if one is provided, or its position otherwise.
 struct PrototypeBrush;
 
-#[solid_class(base(PrototypeMaterial), hooks = rigid_hooks())]
+#[solid_class(base(PrototypeMaterial), hooks = Self::hooks())]
 #[derive(Debug, Default, Component)]
 #[reflect(Debug, Default, Component)]
 struct RigidBrush;
-fn rigid_hooks() -> SceneHooks {
-	SceneHooks::new().meshes_with(DynamicCollider)
+impl RigidBrush {
+	fn hooks() -> SceneHooks {
+		SceneHooks::new().meshes_with(DynamicCollider)
+	}
 }
 
 #[derive(Debug, Clone, Default, Component, Reflect)]
