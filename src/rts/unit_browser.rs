@@ -6,7 +6,7 @@ use bevy_egui::egui;
 
 use super::units::{UnitData, UnitList};
 
-use crate::debug::PrototypeMaterial;
+use crate::{debug::PrototypeMaterial, utils::GameLayer};
 
 pub fn plugin(app: &mut App) {
 	#[derive(Resource)]
@@ -25,6 +25,7 @@ pub fn plugin(app: &mut App) {
 			Mesh3d(mesh),
 			PrototypeMaterial::new("cuboid"),
 			// Transform::from_xyz(0., 20., 0.),
+			GameLayer::Unit.to_layers(GameLayer::full()),
 			crate::movement::Floater::default(),
 			crate::movement::FloatMovement {
 				acceleration: 8.0,

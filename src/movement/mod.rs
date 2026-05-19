@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use avian3d::prelude::{forces::ForcesItem, *};
 use tracing::instrument;
 
+use crate::utils::GameLayer;
+
 pub mod player;
 
 pub fn plugin(app: &mut App) {
@@ -47,7 +49,8 @@ impl Default for FloatMovement {
 	}
 }
 
-#[derive(Debug, Clone, Copy, Component, Reflect)]
+#[derive(Debug, Clone, Component, Reflect)]
+#[component(on_insert)]
 #[require(
 	RigidBody::Dynamic,
 	ConstantForce,
@@ -60,6 +63,8 @@ pub struct Floater {
 
 	pub upright_strength: f32,
 	pub upright_dampner: f32,
+
+	pub ground_filter: SpatialQueryFilter,
 }
 impl Default for Floater {
 	fn default() -> Self {
@@ -69,10 +74,18 @@ impl Default for Floater {
 			spring_damp: 1.5,
 			upright_strength: 6.0,
 			upright_dampner: 0.3,
+			ground_filter: GameLayer::Ground.to_filter(),
 		}
 	}
 }
 impl Floater {
+	#[instrument(skip_all)]
+	fn on_insert(mut world: bevy::ecs::world::DeferredWorld, ctx: bevy::ecs::lifecycle::HookContext) {
+		// Note that if a Component is reused, it will still contain the filter of the previous Entity.
+		// I don't think that'll ever happen.
+		world.get_mut::<Self>(ctx.entity).unwrap().ground_filter.excluded_entities.insert(ctx.entity);
+	}
+
 	#[instrument(skip_all)]
 	fn update_torque_upright(floaters: Populated<(Forces, &Floater), Without<MovementInput>>) {
 		for (mut forces, floater) in floaters {
@@ -137,14 +150,13 @@ impl Floater {
 	) {
 		let down = Vec3::NEG_Y;
 
-		for (floater_ent, &floater, mut force, movement_comps) in floaters {
+		for (floater_ent, floater, mut force, movement_comps) in floaters {
 			let xform = forces.get_mut(floater_ent.entity).unwrap();
 
 			let global_pos = **xform.position();
 			let velocity = xform.linear_velocity();
 
-			let filter = SpatialQueryFilter::from_excluded_entities([floater_ent.entity]);
-			let hit = spatial.cast_ray(global_pos, Dir3::NEG_Y, floater.desired_height, false, &filter);
+			let hit = spatial.cast_ray(global_pos, Dir3::NEG_Y, floater.desired_height, false, &floater.ground_filter);
 			let Some(hit) = hit else {
 				force.0 = Vec3::ZERO;
 				gizmos.ray(global_pos, Vec3::NEG_Y * floater.desired_height, LinearRgba::WHITE.with_alpha(0.1));

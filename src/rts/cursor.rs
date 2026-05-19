@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use avian3d::prelude::*;
 use bevy_enhanced_input::prelude::*;
 
-use crate::debug::PrototypeMaterial;
+use crate::{debug::PrototypeMaterial, utils::GameLayer};
 
 pub fn plugin(app: &mut App) {
 	app
@@ -50,7 +50,7 @@ impl Cursor {
 		let (cam, cam_xform) = cam_query.get(state.rts_camera).unwrap();
 		let ray = cam.viewport_to_world(cam_xform, cursor_pos)?;
 
-		let Some(hit) = spatial.cast_ray(ray.origin, ray.direction, f32::INFINITY, false, &default()) else {
+		let Some(hit) = spatial.cast_ray(ray.origin, ray.direction, f32::INFINITY, false, &GameLayer::Ground.to_filter()) else {
 			*vis = Visibility::Hidden;
 			return Ok(());
 		};

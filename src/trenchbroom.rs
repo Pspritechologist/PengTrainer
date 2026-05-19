@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 use bevy_trenchbroom::{config::MapFileFormat, physics::{PhysicsBackend, TrenchBroomPhysicsPlugin}, prelude::*};
 use avian3d::prelude::{Collider, LinearVelocity, RigidBody};
-use crate::{debug::{self, ColorSource}, utils::WithAppended};
+use crate::{debug::{self, ColorSource}, utils::{GameLayer, WithAppended}};
 
 pub fn plugin(app: &mut App) {
 	let tb_plugin_cfg = TrenchBroomConfig::new("PengTrainerBevy")
 		.file_formats([MapFileFormat::Quake2Valve])
 		.icon(Some(include_bytes!("../icon/32x.png").into()))
 		.global_transform_application(false)
-		.default_solid_scene_hooks(|| SceneHooks::new().convex_collider())
+		.default_solid_scene_hooks(|| SceneHooks::new().with(GameLayer::Ground.to_layers(GameLayer::full())).convex_collider())
 		.texture_exclusions(TrenchBroomConfig::default_texture_exclusions().with_appended("prototype"));
 
 	#[cfg(not(debug_assertions))]
