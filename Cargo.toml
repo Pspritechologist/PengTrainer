@@ -13,7 +13,7 @@ bevy_enhanced_input = "0.24.0"
 bevy_trenchbroom = { version = "0.13.0", features = ["physics-integration"] }
 bevy-inspector-egui = "0.36.0"
 bevy_rts_camera = "0.13.0"
-bevy_egui = { version = "0.39.1", default-features = false }
+bevy_egui = { version = "0.39.1", default-features = false, features = ["immutable_ctx"] }
 
 tracing = "0.1.0"
 fastrand = "2.3.0"

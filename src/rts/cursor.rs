@@ -15,12 +15,12 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Debug, Clone, Component, Reflect)]
 pub struct Cursor {
-	
+	active: bool,
 }
 impl Cursor {
 	pub fn spawn<'a>(cmds: &'a mut Commands, assets: &AssetServer) -> EntityCommands<'a> {
 		cmds.spawn((
-			Self { },
+			Self { active: false },
 			RtsPlayerInput,
 			Mesh3d(assets.add(Torus::new(0.60, 0.62).into())),
 			PrototypeMaterial::new("cursor"),
@@ -33,17 +33,36 @@ impl Cursor {
 
 	#[tracing::instrument(skip_all)]
 	fn update(
+		mut cmds: Commands,
 		state: Res<super::RtsState>,
 		window: Single<&Window, With<bevy::window::PrimaryWindow>>,
+		egui: bevy_egui::EguiContexts,
 		cam_query: Query<(&Camera, &GlobalTransform)>,
-		mut cursor_query: Populated<(&Cursor, &mut Visibility, &mut Transform)>,
+		mut cursor_query: Populated<(&mut Cursor, &Visibility, &Transform)>,
 		spatial: SpatialQuery,
 		time: Res<Time>,
-	) -> Result<()> {
-		let (cursor, mut vis, mut cursor_xform) = cursor_query.get_mut(state.rts_cursor).unwrap();
+	) -> Result {
+		let (mut cursor, &vis, &(mut cursor_xform)) = cursor_query.get_mut(state.rts_cursor).unwrap();
+
+		let mut disable = || {
+			cursor.active = false;
+			if !matches!(vis, Visibility::Hidden) {
+				cmds.entity(state.rts_cursor).insert(Visibility::Hidden);
+			}
+		};
+
+		let is_pointer_in_ui = {
+			let ctx = egui.ctx().unwrap();
+			ctx.wants_pointer_input() || ctx.is_using_pointer()
+		};
+		
+		if is_pointer_in_ui {
+			disable();
+			return Ok(());
+		}
 
 		let Some(cursor_pos) = window.cursor_position() else {
-			*vis = Visibility::Hidden;
+			disable();
 			return Ok(());
 		};
 
@@ -51,14 +70,19 @@ impl Cursor {
 		let ray = cam.viewport_to_world(cam_xform, cursor_pos)?;
 
 		let Some(hit) = spatial.cast_ray(ray.origin, ray.direction, f32::INFINITY, false, &GameLayer::Ground.to_filter()) else {
-			*vis = Visibility::Hidden;
+			disable();
 			return Ok(());
 		};
 
+		if matches!(vis, Visibility::Hidden) {
+			cmds.entity(state.rts_cursor).insert(Visibility::Inherited);
+		}
+		cursor.active = true;
+		
 		cursor_xform.translation = ray.get_point(hit.distance);
-		*vis = Visibility::Inherited;
-
 		cursor_xform.rotate_y(time.delta_secs() * std::f32::consts::PI);
+
+		cmds.entity(state.rts_cursor).insert(cursor_xform);
 
 		Ok(())
 	}
@@ -72,10 +96,11 @@ pub struct RtsPlayerInput;
 pub struct PlaceUnit;
 impl PlaceUnit {
 	#[tracing::instrument(skip_all)]
-	fn on_place(input: On<Complete<PlaceUnit>>, mut cmds: Commands, state: Res<super::RtsState>, xforms: Query<&GlobalTransform>) {
+	fn on_place(input: On<Complete<PlaceUnit>>, mut cmds: Commands, state: Res<super::RtsState>, xforms: Query<(&Cursor, &GlobalTransform)>) {
 		let Some(unit) = state.selected_unit else { return };
 
-		let xform = xforms.get(input.context).unwrap();
+		let (cursor, xform) = xforms.get(input.context).unwrap();
+		if !cursor.active { return; }
 		cmds.trigger(super::units::SpawnUnit::new(unit, xform.compute_transform()));
 	}
 }
